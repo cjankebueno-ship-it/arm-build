@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0b0c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Trainer Floor</title>
+  <style>
+:root{
+  --bg:#0b0b0c;
+  --panel:#151517;
+  --panel2:#1c1c20;
+  --line:#2d2d31;
+  --text:#f7f7f8;
+  --muted:#9b9ba3;
+  --red:#ef3e43;
+  --red2:#ff5a5f;
+  --white:#fff;
+  --green:#42c67a;
+  --radius:18px;
+  --shadow:0 14px 38px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{padding-bottom:env(safe-area-inset-bottom)}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.app-shell{min-height:100vh;max-width:720px;margin:0 auto;background:var(--bg)}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;background:rgba(11,11,12,.92);backdrop-filter:blur(14px);border-bottom:1px solid #1c1c1f}
+.brand{font-weight:900;letter-spacing:-.04em;font-size:22px}.brand span{color:var(--red)}
+.top-actions{display:flex;align-items:center;gap:8px}
+.icon-btn,.small-btn,.ghost-btn,.primary-btn,.danger-btn,.category-chip,.equipment-chip{border:0;border-radius:12px;color:var(--text)}
+.icon-btn,.small-btn,.ghost-btn{background:var(--panel2);border:1px solid var(--line)}
+.icon-btn{width:42px;height:42px;font-size:20px}.small-btn{padding:10px 12px;font-weight:750}.ghost-btn{padding:12px 14px;font-weight:750}
+.primary-btn{background:var(--red);padding:13px 16px;font-weight:900}.primary-btn:active{transform:translateY(1px)}
+.danger-btn{background:#3b1719;color:#ffb8bb;border:1px solid #6a292d;padding:12px 14px;font-weight:800}
+.screen{padding:18px 16px 110px}
+.page-title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}.page-title h1{font-size:30px;line-height:1.05;margin:0;letter-spacing:-.045em}.page-title p{color:var(--muted);margin:6px 0 0;font-size:14px}.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);color:#ddd;padding:7px 9px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}.badge.founder{border-color:#633; background:#241416;color:#ffb9bc}.badge.free{color:#ccc}.badge.pro{color:#b7f7d3;border-color:#245d3d;background:#10271b}
+.search{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;color:var(--text);padding:13px 14px;margin-bottom:14px}.search::placeholder{color:#707078}
+.client-list{display:grid;gap:10px}.client-card{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:16px;padding:15px;text-align:left}.client-card:hover{border-color:#444}.client-name{font-size:17px;font-weight:900;letter-spacing:-.02em}.client-sub{margin-top:4px;font-size:13px;color:var(--muted)}.client-arrow{font-size:24px;color:#666}.empty{border:1px dashed #38383d;background:#101012;padding:28px 20px;border-radius:18px;text-align:center}.empty strong{display:block;font-size:18px;margin-bottom:6px}.empty p{margin:0 0 16px;color:var(--muted);line-height:1.45}
+.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:25;width:min(720px,100%);display:grid;grid-template-columns:1fr 1fr 1fr;background:rgba(18,18,20,.96);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom))}.nav-btn{border:0;background:transparent;color:#777;padding:8px 6px;font-size:11px;font-weight:800}.nav-btn b{display:block;font-size:20px;margin-bottom:3px}.nav-btn.active{color:var(--text)}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 18px}.login-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:var(--shadow)}.login-logo{font-size:34px;font-weight:950;letter-spacing:-.06em}.login-logo span{color:var(--red)}.login-card h1{margin:12px 0 4px;font-size:28px}.login-card p{color:var(--muted);line-height:1.5}.field{display:grid;gap:7px;margin-top:14px}.field label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#a6a6ad;font-weight:900}.field input,.field textarea,.field select{width:100%;background:#0e0e10;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:12px 13px}.field textarea{min-height:96px;resize:vertical}.full{width:100%;margin-top:16px}.tiny{font-size:12px;color:#787880!important;margin-top:12px!important}
+.client-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}.back-btn{border:0;background:var(--panel2);color:var(--text);width:42px;height:42px;border-radius:12px;font-size:21px}.client-header h1{margin:0;font-size:26px;letter-spacing:-.04em}.client-header .sub{font-size:12px;color:var(--muted);margin-top:2px}.header-actions{margin-left:auto;display:flex;gap:8px}
+.note-card{background:#151214;border:1px solid #38262a;border-radius:14px;padding:12px 13px;margin:12px 0 16px;color:#e7d6d9}.note-card .note-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#b88b92;font-weight:900;margin-bottom:4px}.note-card .note-text{white-space:pre-wrap;font-size:14px;line-height:1.42}.note-empty{color:#896b70}
+.session-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0}.session-title{font-size:20px;font-weight:950;letter-spacing:-.03em}.session-date{font-size:12px;color:var(--muted);margin-top:2px}.session-actions{display:flex;gap:8px}
+.exercise-list{display:grid;gap:12px}.exercise-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}.exercise-head{display:flex;align-items:flex-start;gap:10px}.exercise-title{flex:1;min-width:0}.exercise-title h3{font-size:17px;margin:0;letter-spacing:-.02em}.exercise-meta{color:var(--muted);font-size:12px;margin-top:4px;text-transform:capitalize}.change-btn{border:1px solid var(--line);background:#101012;color:#d7d7db;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:900}.log-row{display:flex;align-items:center;gap:10px;margin-top:13px}.weight-box{width:95px;display:flex;align-items:center;gap:4px;background:#0f0f11;border:1px solid var(--line);border-radius:13px;padding:9px}.weight-box input{width:55px;background:transparent;border:0;color:var(--text);font-weight:900;font-size:17px;outline:none}.weight-box span{font-size:11px;color:var(--muted);font-weight:800}.set-circles{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}.set-circle{width:47px;height:47px;border-radius:50%;border:2px solid var(--red);background:transparent;color:#ff9093;font-size:14px;font-weight:950;display:grid;place-items:center;transition:.12s ease}.set-circle.logged{background:var(--red);color:white;box-shadow:0 0 0 3px rgba(239,62,67,.12)}.set-circle:active{transform:scale(.94)}.set-add{width:42px;height:42px;border-radius:50%;border:1px dashed #555;background:transparent;color:#999;font-weight:900}.exercise-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px}.mini-note{font-size:12px;color:#a8a8af;max-width:78%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.remove-ex{border:0;background:transparent;color:#855;font-size:16px;padding:4px 6px}
+.add-exercise{width:100%;margin-top:12px;background:#121214;border:1px dashed #444;color:#d2d2d6;border-radius:16px;padding:14px;font-weight:900}.finish-btn{width:100%;margin-top:16px;background:var(--red);border:0;color:white;border-radius:16px;padding:16px;font-size:16px;font-weight:950}.completed-banner{background:#11271a;border:1px solid #255c3c;color:#baf6d2;border-radius:14px;padding:12px 14px;margin:12px 0;font-weight:800}
+.modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center}.modal{width:min(720px,100%);max-height:89vh;overflow:auto;background:#121214;border:1px solid #333;border-radius:24px 24px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:var(--shadow)}.modal-handle{width:42px;height:5px;background:#444;border-radius:99px;margin:0 auto 12px}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.modal-head h2{margin:0;font-size:23px;letter-spacing:-.035em}.close-btn{border:0;background:var(--panel2);color:#aaa;width:38px;height:38px;border-radius:12px;font-size:19px}.chips{display:flex;gap:8px;overflow:auto;padding:10px 0 4px}.category-chip,.equipment-chip{background:var(--panel2);border:1px solid var(--line);padding:9px 12px;font-size:12px;font-weight:900;text-transform:capitalize;white-space:nowrap}.category-chip.active,.equipment-chip.active{background:var(--red);border-color:var(--red);color:#fff}.picker-list{display:grid;gap:8px;margin-top:12px}.picker-item{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;text-align:left;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px}.picker-item strong{display:block;font-size:15px}.picker-item small{display:block;color:var(--muted);margin-top:3px;text-transform:capitalize}.picker-plus{font-size:24px;color:var(--red)}
+.settings-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}.settings-card h3{margin:0 0 8px;font-size:16px}.settings-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}.settings-row{display:flex;justify-content:space-between;align-items:center;gap:14px}.plan-price{font-size:28px;font-weight:950;letter-spacing:-.05em}.muted{color:var(--muted)}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}.stat b{display:block;font-size:22px;letter-spacing:-.04em}.stat span{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:900;letter-spacing:.06em}
+.toast{position:fixed;z-index:100;left:50%;bottom:92px;transform:translate(-50%,20px);background:#f7f7f8;color:#111;border-radius:999px;padding:10px 14px;font-weight:800;font-size:13px;opacity:0;pointer-events:none;transition:.18s ease;white-space:nowrap;max-width:88vw;overflow:hidden;text-overflow:ellipsis}.toast.show{opacity:1;transform:translate(-50%,0)}
+.sep{height:1px;background:var(--line);margin:14px 0}.row{display:flex;align-items:center;gap:10px}.grow{flex:1}.right{margin-left:auto}
+@media (min-width:700px){.modal{border-radius:24px;margin-bottom:18px}.modal-backdrop{align-items:center}.screen{padding-left:24px;padding-right:24px}.topbar{padding-left:24px;padding-right:24px}}
+
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script>
+const SUPABASE_URL = 'https://srsuoehdnfzobzvtkldz.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_TFJSeU_mqgg5phsiD8PyHw_SfFUrUBy';
+const SESSION_KEY = 'trainer_floor_session_v2';
+function readStoredSession(){try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{return null}}
+function writeStoredSession(s){if(s)localStorage.setItem(SESSION_KEY,JSON.stringify(s));else localStorage.removeItem(SESSION_KEY)}
+async function api(path,{method='GET',body,token,headers={}}={}){
+  const res=await fetch(SUPABASE_URL+path,{method,headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...headers},body:body===undefined?undefined:JSON.stringify(body)});
+  const txt=await res.text(); let data=null; try{data=txt?JSON.parse(txt):null}catch{data=txt}
+  if(!res.ok){const msg=data?.msg||data?.message||data?.error_description||data?.error||('Request failed ('+res.status+')');throw new Error(msg)}
+  return {data,status:res.status,headers:res.headers};
+}
+async function refreshSession(s){if(!s?.refresh_token)return null;try{const {data}=await api('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:s.refresh_token}});writeStoredSession(data);return data}catch{writeStoredSession(null);return null}}
+async function validSession(){
+  let s=readStoredSession(); if(!s?.access_token)return null;
+  if(s.expires_at && s.expires_at < Math.floor(Date.now()/1000)+30)s=await refreshSession(s);
+  if(!s)return null;
+  try{const {data:user}=await api('/auth/v1/user',{token:s.access_token});return {session:s,user}}
+  catch{ s=await refreshSession(s); if(!s)return null; try{const {data:user}=await api('/auth/v1/user',{token:s.access_token});return {session:s,user}}catch{writeStoredSession(null);return null}}
+}
+function authToken(){return readStoredSession()?.access_token||''}
+function q(v){return encodeURIComponent(v)}
+async function restSelect(table,query=''){const {data}=await api('/rest/v1/'+table+(query?'?'+query:''),{token:authToken(),headers:{Accept:'application/json'}});return data}
+async function restInsert(table,payload,{returnRow=false}={}){const {data}=await api('/rest/v1/'+table,{method:'POST',body:payload,token:authToken(),headers:{Prefer:returnRow?'return=representation':'return=minimal'}});return data}
+async function restUpsert(table,payload){await api('/rest/v1/'+table,{method:'POST',body:payload,token:authToken(),headers:{Prefer:'resolution=merge-duplicates,return=minimal'}})}
+const SB={auth:{
+  async getSession(){const x=await validSession();return {data:{session:x?.session?{...x.session,user:x.user}:null}}},
+  async signInWithPassword({email,password}){try{const {data}=await api('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password}});writeStoredSession(data);return {data:{session:data,user:data.user},error:null}}catch(error){return {data:{},error}}},
+  async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
+  async signOut(){writeStoredSession(null);return {error:null}}
+}};
+const APP_VERSION = '0.4.3';
+const FREE_CLIENT_LIMIT = 3;
+const TARGET_REPS = 15;
+
+const EXERCISES = [
+  {name:'Dumbbell Bench Press', cat:'push', eq:'dumbbells'},
+  {name:'Incline Dumbbell Press', cat:'push', eq:'dumbbells'},
+  {name:'Push-Up', cat:'push', eq:'bodyweight'},
+  {name:'Machine Chest Press', cat:'push', eq:'machine'},
+  {name:'Cable Chest Press', cat:'push', eq:'cable'},
+  {name:'Dumbbell Shoulder Press', cat:'push', eq:'dumbbells'},
+  {name:'Dumbbell Lateral Raise', cat:'push', eq:'dumbbells'},
+  {name:'Cable Triceps Pressdown', cat:'push', eq:'cable'},
+  {name:'Overhead Dumbbell Triceps Extension', cat:'push', eq:'dumbbells'},
+  {name:'Bench Dip', cat:'push', eq:'bench'},
+  {name:'One-Arm Dumbbell Row', cat:'pull', eq:'dumbbells'},
+  {name:'Lat Pulldown', cat:'pull', eq:'cable'},
+  {name:'Seated Cable Row', cat:'pull', eq:'cable'},
+  {name:'Machine Row', cat:'pull', eq:'machine'},
+  {name:'Assisted Pull-Up', cat:'pull', eq:'machine'},
+  {name:'Pull-Up', cat:'pull', eq:'bodyweight'},
+  {name:'Face Pull', cat:'pull', eq:'cable'},
+  {name:'Dumbbell Curl', cat:'pull', eq:'dumbbells'},
+  {name:'Hammer Curl', cat:'pull', eq:'dumbbells'},
+  {name:'Cable Curl', cat:'pull', eq:'cable'},
+  {name:'Goblet Squat', cat:'legs', eq:'dumbbells'},
+  {name:'Leg Press', cat:'legs', eq:'machine'},
+  {name:'Leg Extension', cat:'legs', eq:'machine'},
+  {name:'Hamstring Curl', cat:'legs', eq:'machine'},
+  {name:'Dumbbell Romanian Deadlift', cat:'legs', eq:'dumbbells'},
+  {name:'Barbell Deadlift', cat:'legs', eq:'barbell'},
+  {name:'Reverse Lunge', cat:'legs', eq:'dumbbells'},
+  {name:'Step-Up', cat:'legs', eq:'bench'},
+  {name:'Hip Thrust', cat:'legs', eq:'bench'},
+  {name:'Calf Raise', cat:'legs', eq:'machine'},
+  {name:'Plank', cat:'core', eq:'bodyweight'},
+  {name:'Side Plank', cat:'core', eq:'bodyweight'},
+  {name:'Dead Bug', cat:'core', eq:'bodyweight'},
+  {name:'Bird Dog', cat:'core', eq:'bodyweight'},
+  {name:'Pallof Press', cat:'core', eq:'cable'},
+  {name:'Cable Chop', cat:'core', eq:'cable'},
+  {name:'Reverse Crunch', cat:'core', eq:'bodyweight'},
+  {name:'Hanging Knee Raise', cat:'core', eq:'bodyweight'},
+  {name:'Suitcase Carry', cat:'core', eq:'dumbbells'},
+  {name:'Treadmill Walk', cat:'legs', eq:'treadmill'},
+];
+
+const state = {
+  user: null,
+  data: null,
+  view: 'clients',
+  selectedClientId: null,
+  modal: null,
+  picker: { category:'all', equipment:'all', search:'', replaceIndex:null }
+};
+
+const $ = (s) => document.querySelector(s);
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
+const esc = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const todayKey = () => new Date().toISOString().slice(0,10);
+const niceDate = (d=new Date()) => d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+
+async function loadRemote(user){
+  let rows=await restSelect('tf_profiles',`select=*&user_id=eq.${q(user.id)}&limit=1`);
+  let profile=rows?.[0]||null;
+  if(!profile){
+    const displayName=user.user_metadata?.display_name||user.email?.split('@')[0]||'Trainer';
+    const made=await restInsert('tf_profiles',{user_id:user.id,display_name:displayName},{returnRow:true});
+    profile=made?.[0];
+  }
+  const [clientsRows,sessionsRows]=await Promise.all([restSelect('tf_clients','select=*&order=created_at.asc'),restSelect('tf_sessions','select=*&order=created_at.asc')]);
+  state.user=user;
+  state.data={version:APP_VERSION,profile:{id:user.id,name:profile?.display_name||'Trainer',email:user.email||'',trainerNumber:profile?.trainer_number,createdAt:profile?.created_at},
+    clients:(clientsRows||[]).map(c=>({id:c.id,name:c.name,note:c.note||'',archived:c.archived,createdAt:c.created_at})),
+    sessions:(sessionsRows||[]).map(s=>({id:s.id,clientId:s.client_id,date:s.session_date,createdAt:s.created_at,completedAt:s.completed_at,sessionNote:s.session_note||'',exercises:Array.isArray(s.workout)?s.workout:[]})),
+    plan:profile?.plan||'free'};
+}
+const syncTimers = new Map();
+
+function scheduleSync(key, work, delay=180){
+  const existing = syncTimers.get(key);
+  if(existing) clearTimeout(existing);
+  const timer = setTimeout(async()=>{
+    syncTimers.delete(key);
+    try{ await work(); }
+    catch(error){ console.error(error); toast('Save failed — check connection'); }
+  }, delay);
+  syncTimers.set(key, timer);
+}
+
+async function syncClient(client){
+  if(!state.user || !client) return;
+  const payload={
+    id:client.id, trainer_id:state.user.id, name:client.name, note:client.note||'',
+    archived:!!client.archived, updated_at:new Date().toISOString()
+  };
+  await restUpsert('tf_clients',payload);
+}
+
+async function syncSession(session){
+  if(!state.user || !session) return;
+  const payload={
+    id:session.id, trainer_id:state.user.id, client_id:session.clientId,
+    session_date:session.date, workout:session.exercises||[], session_note:session.sessionNote||'',
+    completed_at:session.completedAt||null, updated_at:new Date().toISOString()
+  };
+  await restUpsert('tf_sessions',payload);
+}
+
+function saveClient(client){ scheduleSync(`client:${client.id}`,()=>syncClient(client)); }
+function saveSession(session){ scheduleSync(`session:${session.id}`,()=>syncSession(session)); }
+
+function toast(msg){
+  const el = $('#toast');
+  if(!el) return;
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(window.__toast); window.__toast = setTimeout(()=>el.classList.remove('show'),1700);
+}
+
+async function start(){
+  renderLogin();
+  try{
+    const restored = await Promise.race([
+      SB.auth.getSession(),
+      new Promise(resolve=>setTimeout(()=>resolve({data:{session:null}}),2500))
+    ]);
+    const session = restored?.data?.session || null;
+    if(session?.user){
+      try{
+        await loadRemote(session.user);
+        render();
+      }catch(e){
+        console.error(e);
+        renderLogin('Signed in, but your trainer data could not load. Please sign in again.');
+      }
+    }
+  }catch(e){
+    console.error(e);
+    renderLogin('Could not restore your previous session. Sign in to continue.');
+  }
+}
+
+function renderLogin(message=''){
+  $('#app').innerHTML = `
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="login-logo">TRAINER<span>•</span>FLOOR</div>
+        <h1>Fast workout logging.</h1>
+        <p>Client → workout → tap sets. Built for the gym floor.</p>
+        ${message?`<div class="note-card"><div class="note-text">${esc(message)}</div></div>`:''}
+        <form id="loginForm">
+          <div class="field"><label>Your name</label><input id="name" autocomplete="name" placeholder="Chris" /></div>
+          <div class="field"><label>Email</label><input id="email" type="email" autocomplete="email" placeholder="you@example.com" required /></div>
+          <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" minlength="8" placeholder="8+ characters" required /></div>
+          <button class="primary-btn full" id="signIn" type="submit">Sign in</button>
+          <button class="ghost-btn full" id="createAccount" type="button">Create trainer account</button>
+        </form>
+        <p class="tiny">Free for up to 3 active clients. $99/month after that. Trainer #1 receives founder access.</p>
+      </div>
+    </div>`;
+  $('#loginForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const email=$('#email').value.trim().toLowerCase(), password=$('#password').value;
+    const btn=$('#signIn'); btn.disabled=true; btn.textContent='Signing in…';
+    const {data,error}=await SB.auth.signInWithPassword({email,password});
+    if(error){btn.disabled=false;btn.textContent='Sign in';return renderLogin(error.message);}
+    await loadRemote(data.user); render();
+  });
+  $('#createAccount').onclick=async()=>{
+    const name=$('#name').value.trim(), email=$('#email').value.trim().toLowerCase(), password=$('#password').value;
+    if(!name || !email || password.length<8){return toast('Name, email and 8+ character password required');}
+    const btn=$('#createAccount'); btn.disabled=true; btn.textContent='Creating…';
+    const {data,error}=await SB.auth.signUp({email,password,options:{data:{display_name:name}}});
+    if(error){btn.disabled=false;btn.textContent='Create trainer account';return renderLogin(error.message);}
+    if(data.session && data.user){ await loadRemote(data.user); render(); }
+    else renderLogin('Account created. Check your email to confirm it, then return here and sign in.');
+  };
+}
+
+function render(){
+  if(!state.user) return renderLogin();
+  $('#app').innerHTML = `
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">TRAINER<span>•</span>FLOOR</div>
+        <div class="top-actions">
+          <span class="badge ${state.data.plan}">Trainer #${state.data.profile.trainerNumber || '—'} • ${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span>
+        </div>
+      </header>
+      <main id="screen" class="screen"></main>
+      <nav class="bottom-nav">
+        <button class="nav-btn ${state.view==='clients'||state.view==='workout'?'active':''}" data-nav="clients"><b>●</b>Clients</button>
+        <button class="nav-btn ${state.view==='history'?'active':''}" data-nav="history"><b>↺</b>History</button>
+        <button class="nav-btn ${state.view==='settings'?'active':''}" data-nav="settings"><b>⚙</b>Settings</button>
+      </nav>
+    </div>${state.modal ? modalHtml() : ''}`;
+  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{state.modal=null; state.view=b.dataset.nav; render();});
+  if(state.view==='clients') renderClients();
+  if(state.view==='workout') renderWorkout();
+  if(state.view==='history') renderHistory();
+  if(state.view==='settings') renderSettings();
+  wireModal();
+}
+
+function renderClients(){
+  const clients = state.data.clients.filter(c=>!c.archived);
+  $('#screen').innerHTML = `
+    <div class="page-title">
+      <div><h1>Clients</h1><p>${clients.length} active ${clients.length===1?'client':'clients'}</p></div>
+      <button id="addClient" class="primary-btn">+ Client</button>
+    </div>
+    <input id="clientSearch" class="search" placeholder="Search clients" />
+    <div class="client-list" id="clientList"></div>`;
+  const draw=(q='')=>{
+    const filtered=clients.filter(c=>c.name.toLowerCase().includes(q.toLowerCase()));
+    $('#clientList').innerHTML = filtered.length ? filtered.map(c=>{
+      const last = [...state.data.sessions].reverse().find(s=>s.clientId===c.id && s.completedAt);
+      return `<button class="client-card" data-client="${c.id}">
+        <div><div class="client-name">${esc(c.name)}</div><div class="client-sub">${last?'Last session '+new Date(last.completedAt).toLocaleDateString():'Ready for first session'}${c.note?' • note saved':''}</div></div>
+        <div class="client-arrow">›</div>
+      </button>`;
+    }).join('') : `<div class="empty"><strong>${q?'No matches':'Add your first client'}</strong><p>${q?'Try a different name.':'This stays intentionally simple: client, workout, notes.'}</p>${q?'':'<button class="primary-btn" id="emptyAdd">+ Add client</button>'}</div>`;
+    document.querySelectorAll('[data-client]').forEach(b=>b.onclick=()=>openClient(b.dataset.client));
+    if($('#emptyAdd')) $('#emptyAdd').onclick=()=>openClientModal();
+  };
+  draw();
+  $('#clientSearch').oninput=e=>draw(e.target.value);
+  $('#addClient').onclick=()=>openClientModal();
+}
+
+function openClient(id){ state.selectedClientId=id; ensureTodaySession(id); state.view='workout'; render(); }
+function openClientModal(client=null){
+  const active = state.data.clients.filter(c=>!c.archived).length;
+  if(!client && state.data.plan==='free' && active>=FREE_CLIENT_LIMIT){ state.modal={type:'upgrade'}; render(); return; }
+  state.modal={type:'client',clientId:client?.id||null}; render();
+}
+
+function ensureTodaySession(clientId){
+  let session = state.data.sessions.find(s=>s.clientId===clientId && s.date===todayKey() && !s.completedAt);
+  if(!session){
+    const last = [...state.data.sessions].reverse().find(s=>s.clientId===clientId && s.exercises?.length);
+    session={id:uid(),clientId,date:todayKey(),createdAt:new Date().toISOString(),completedAt:null,sessionNote:'',exercises:last?last.exercises.map(x=>({...x,id:uid(),sets:x.sets.map(v=>null)})):[]};
+    state.data.sessions.push(session); saveSession(session);
+  }
+  return session;
+}
+
+function currentClient(){ return state.data.clients.find(c=>c.id===state.selectedClientId); }
+function currentSession(){ return state.data.sessions.find(s=>s.clientId===state.selectedClientId && s.date===todayKey() && !s.completedAt) || ensureTodaySession(state.selectedClientId); }
+
+function renderWorkout(){
+  const client=currentClient(); if(!client){state.view='clients';return render();}
+  const session=currentSession();
+  $('#screen').innerHTML=`
+    <div class="client-header">
+      <button class="back-btn" id="back">‹</button>
+      <div><h1>${esc(client.name)}</h1><div class="sub">Today • ${niceDate()}</div></div>
+      <div class="header-actions"><button class="small-btn" id="editClient">Edit</button></div>
+    </div>
+    <div class="note-card" id="clientNoteCard">
+      <div class="note-label">Client note</div>
+      <div class="note-text ${client.note?'':'note-empty'}">${client.note?esc(client.note):'Tap to add a coaching note.'}</div>
+    </div>
+    <div class="session-bar">
+      <div><div class="session-title">Workout</div><div class="session-date">Tap a circle: 15 → 14 → 13…</div></div>
+      <div class="session-actions"><button class="small-btn" id="sessionNote">Notes</button><button class="small-btn" id="quickChange">+ Exercise</button></div>
+    </div>
+    <div class="exercise-list" id="exerciseList">${session.exercises.length?session.exercises.map((e,i)=>exerciseHtml(e,i)).join(''):`<div class="empty"><strong>No exercises yet</strong><p>Add exercises by Push, Pull, Legs or Core. Filter by equipment and tap once.</p><button class="primary-btn" id="firstExercise">+ Add exercise</button></div>`}</div>
+    ${session.exercises.length?'<button class="add-exercise" id="addExercise">+ Add exercise</button>':''}
+    <button class="finish-btn" id="finishSession">Finish session</button>`;
+  $('#back').onclick=()=>{state.view='clients';render();};
+  $('#editClient').onclick=()=>openClientModal(client);
+  $('#clientNoteCard').onclick=()=>{state.modal={type:'clientNote'};render();};
+  $('#sessionNote').onclick=()=>{state.modal={type:'sessionNote'};render();};
+  $('#quickChange').onclick=()=>openPicker(null);
+  if($('#firstExercise')) $('#firstExercise').onclick=()=>openPicker(null);
+  if($('#addExercise')) $('#addExercise').onclick=()=>openPicker(null);
+  $('#finishSession').onclick=finishSession;
+  wireExerciseCards(session);
+}
+
+function exerciseHtml(ex,i){
+  const sets=ex.sets?.length?ex.sets:[null,null,null];
+  return `<div class="exercise-card" data-ex-index="${i}">
+    <div class="exercise-head">
+      <div class="exercise-title"><h3>${esc(ex.name)}</h3><div class="exercise-meta">${esc(ex.cat)} • ${esc(ex.eq)}</div></div>
+      <button class="change-btn" data-change="${i}">Change</button>
+    </div>
+    <div class="log-row">
+      <div class="weight-box"><input inputmode="decimal" value="${ex.weight??''}" placeholder="—" data-weight="${i}"/><span>lb</span></div>
+      <div class="set-circles">${sets.map((r,j)=>`<button class="set-circle ${r!==null?'logged':''}" data-set="${i}:${j}" aria-label="Set ${j+1}">${r===null?'':r}</button>`).join('')}<button class="set-add" data-addset="${i}">+</button></div>
+    </div>
+    <div class="exercise-footer"><div class="mini-note">${ex.note?esc(ex.note):'No exercise note'}</div><button class="remove-ex" data-remove="${i}" title="Remove">×</button></div>
+  </div>`;
+}
+
+function wireExerciseCards(session){
+  document.querySelectorAll('[data-set]').forEach(btn=>btn.onclick=()=>{
+    const [i,j]=btn.dataset.set.split(':').map(Number); let v=session.exercises[i].sets[j];
+    if(v===null) v=TARGET_REPS; else if(v>1) v--; else v=null;
+    session.exercises[i].sets[j]=v; saveSession(session);
+    btn.textContent=v===null?'':v; btn.classList.toggle('logged',v!==null);
+  });
+  document.querySelectorAll('[data-weight]').forEach(inp=>inp.onchange=()=>{session.exercises[+inp.dataset.weight].weight=inp.value;saveSession(session);toast('Weight saved');});
+  document.querySelectorAll('[data-change]').forEach(b=>b.onclick=()=>openPicker(+b.dataset.change));
+  document.querySelectorAll('[data-addset]').forEach(b=>b.onclick=()=>{session.exercises[+b.dataset.addset].sets.push(null);saveSession(session);render();});
+  document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{session.exercises.splice(+b.dataset.remove,1);saveSession(session);render();});
+  document.querySelectorAll('.mini-note').forEach((n,idx)=>n.onclick=()=>{state.modal={type:'exerciseNote',index:idx};render();});
+}
+
+function openPicker(replaceIndex){
+  state.picker={category:'all',equipment:'all',search:'',replaceIndex};
+  state.modal={type:'picker'}; render();
+}
+
+async function finishSession(){
+  const session=currentSession();
+  if(!session.exercises.length){toast('Add at least one exercise');return;}
+  const button=$('#finishSession');
+  if(button){ button.disabled=true; button.textContent='Saving…'; }
+  session.completedAt=new Date().toISOString();
+  try{
+    await syncSession(session);
+    toast('Session saved');
+    state.view='history';
+    render();
+  }catch(error){
+    console.error(error);
+    session.completedAt=null;
+    if(button){ button.disabled=false; button.textContent='Finish session'; }
+    toast('Could not finish — check connection');
+  }
+}
+
+function renderHistory(){
+  const done=[...state.data.sessions].filter(s=>s.completedAt).sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt));
+  $('#screen').innerHTML=`
+    <div class="page-title"><div><h1>History</h1><p>Completed sessions</p></div></div>
+    <div class="stats"><div class="stat"><b>${done.length}</b><span>Sessions</span></div><div class="stat"><b>${state.data.clients.filter(c=>!c.archived).length}</b><span>Clients</span></div><div class="stat"><b>${done.reduce((n,s)=>n+(s.exercises?.length||0),0)}</b><span>Exercises</span></div></div>
+    <div class="client-list">${done.length?done.map(s=>{
+      const c=state.data.clients.find(x=>x.id===s.clientId);
+      return `<button class="client-card" data-history="${s.id}"><div><div class="client-name">${esc(c?.name||'Archived client')}</div><div class="client-sub">${new Date(s.completedAt).toLocaleDateString()} • ${s.exercises.length} exercises${s.sessionNote?' • note saved':''}</div></div><div class="client-arrow">›</div></button>`;
+    }).join(''):`<div class="empty"><strong>No completed sessions</strong><p>Finish a workout and it will appear here.</p></div>`}</div>`;
+  document.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>{state.modal={type:'history',sessionId:b.dataset.history};render();});
+}
+
+function renderSettings(){
+  const p=state.data.profile; const active=state.data.clients.filter(c=>!c.archived).length;
+  $('#screen').innerHTML=`
+    <div class="page-title"><div><h1>Settings</h1><p>${esc(p.email)}</p></div></div>
+    <div class="settings-card"><div class="settings-row"><div><h3>${esc(p.name)}</h3><p>${state.data.profile.trainerNumber===1?'Founder access • unlimited clients':state.data.plan==='pro'?'Pro • unlimited clients':`Free • up to ${FREE_CLIENT_LIMIT} clients`}</p></div><span class="badge ${state.data.plan}">Trainer #${state.data.profile.trainerNumber || '—'} • ${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span></div></div>
+    <div class="settings-card"><div class="settings-row"><div><h3>Founder pricing</h3><p>Free through 3 active clients. Founders lock their joining rate for life; each new paid founder raises the price $1/month for the next trainer.</p></div><div style="text-align:right"><div style="font-size:14px;color:#777;text-decoration:line-through">$99/mo</div><div class="plan-price">$9</div><div class="muted" style="font-size:12px">Founder rate / month</div></div></div>${state.data.plan==='free'?'<button class="primary-btn full" id="upgrade">See Founder Rate</button>':''}</div>
+    <div class="settings-card"><h3>Data backup</h3><p>Download a JSON copy of your trainer data anytime.</p><button class="ghost-btn full" id="export">Export backup</button></div>
+    <div class="settings-card"><h3>Account</h3><p>${active} active clients synced to your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>`;
+  if($('#upgrade')) $('#upgrade').onclick=()=>{state.modal={type:'upgrade'};render();};
+  $('#logout').onclick=async()=>{await SB.auth.signOut();state.user=null;state.data=null;state.modal=null;renderLogin();};
+  $('#export').onclick=()=>{
+    const blob=new Blob([JSON.stringify(state.data,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='trainer-floor-backup.json';a.click();URL.revokeObjectURL(a.href);
+  };
+}
+
+function modalHtml(){
+  const m=state.modal;
+  if(m.type==='client'){
+    const c=m.clientId?state.data.clients.find(x=>x.id===m.clientId):null;
+    return modalWrap(`${c?'Edit':'Add'} client`, `<form id="clientForm"><div class="field"><label>Name</label><input id="clientName" value="${esc(c?.name||'')}" required autofocus /></div><div class="field"><label>Client note</label><textarea id="clientNote" placeholder="Injuries, goals, coaching cues…">${esc(c?.note||'')}</textarea></div><button class="primary-btn full" type="submit">${c?'Save client':'Add client'}</button>${c?'<button class="danger-btn full" id="archiveClient" type="button">Archive client</button>':''}</form>`);
+  }
+  if(m.type==='clientNote'){
+    const c=currentClient(); return modalWrap('Client note',`<form id="clientNoteForm"><div class="field"><textarea id="clientNoteText" placeholder="Important things to remember…" autofocus>${esc(c.note||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
+  }
+  if(m.type==='sessionNote'){
+    const s=currentSession(); return modalWrap('Session notes',`<form id="sessionNoteForm"><div class="field"><textarea id="sessionNoteText" placeholder="How did today go?">${esc(s.sessionNote||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
+  }
+  if(m.type==='exerciseNote'){
+    const ex=currentSession().exercises[m.index]; return modalWrap('Exercise note',`<form id="exerciseNoteForm"><p class="muted">${esc(ex.name)}</p><div class="field"><textarea id="exerciseNoteText" placeholder="Cue, pain, setup, progression…">${esc(ex.note||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
+  }
+  if(m.type==='picker') return pickerHtml();
+  if(m.type==='upgrade') return modalWrap('Founder Rate',`<div class="settings-card founder-sale">
+  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:#ff9a9d;margin-bottom:8px">Early Founder Pricing</div>
+  <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+    <div style="font-size:24px;color:#777;text-decoration:line-through;text-decoration-thickness:2px">$99/month</div>
+    <div class="plan-price" style="font-size:44px;color:#fff">$9<span style="font-size:15px;letter-spacing:0;color:#aaa">/month</span></div>
+  </div>
+  <div style="font-weight:950;font-size:18px;margin-top:5px">Your Founder Rate</div>
+  <p style="margin-top:8px">Join at today's price and keep that monthly rate. Every new paid founder raises the price by <strong>$1/month</strong> for the next trainer.</p>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
+    <div class="stat" style="text-align:center"><b>$9</b><span>You</span></div>
+    <div class="stat" style="text-align:center"><b>$10</b><span>Next founder</span></div>
+    <div class="stat" style="text-align:center"><b>$11</b><span>Then</span></div>
+  </div>
+  <p class="tiny" style="margin-bottom:0!important">Example: Founder #1 locks $9/mo. Founder #2 locks $10/mo. Founder #3 locks $11/mo. The price keeps rising $1 for each new paid founder, up to the planned $99/mo standard price.</p>
+</div>
+<button class="primary-btn full" id="prototypeUpgrade">Lock in $9/month Founder Rate</button>
+<p class="tiny">Checkout is not active yet. The price will only advance after a completed paid subscription once billing is connected.</p>`);
+  if(m.type==='history'){
+    const s=state.data.sessions.find(x=>x.id===m.sessionId); const c=state.data.clients.find(x=>x.id===s?.clientId);
+    return modalWrap(`${esc(c?.name||'Session')}`,`<p class="muted">${s?new Date(s.completedAt).toLocaleString():''}</p>${s?.sessionNote?`<div class="note-card"><div class="note-label">Session note</div><div class="note-text">${esc(s.sessionNote)}</div></div>`:''}<div class="client-list">${(s?.exercises||[]).map(ex=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(ex.name)}</div><div class="client-sub">${ex.weight?esc(ex.weight)+' lb • ':''}${ex.sets.filter(v=>v!==null).join(', ')||'No reps logged'}</div></div></div>`).join('')}</div>`);
+  }
+  return '';
+}
+function modalWrap(title,body){ return `<div class="modal-backdrop" id="backdrop"><div class="modal" role="dialog" aria-modal="true"><div class="modal-handle"></div><div class="modal-head"><h2>${title}</h2><button class="close-btn" id="closeModal">×</button></div>${body}</div></div>`; }
+
+function pickerHtml(){
+  const cats=['all','push','pull','legs','core']; const eq=['all',...new Set(EXERCISES.map(x=>x.eq))];
+  return `<div class="modal-backdrop" id="backdrop"><div class="modal" role="dialog" aria-modal="true"><div class="modal-handle"></div><div class="modal-head"><h2>${state.picker.replaceIndex===null?'Add exercise':'Change exercise'}</h2><button class="close-btn" id="closeModal">×</button></div>
+  <div class="chips">${cats.map(c=>`<button class="category-chip ${state.picker.category===c?'active':''}" data-cat="${c}">${c}</button>`).join('')}</div>
+  <input class="search" id="exerciseSearch" placeholder="Search exercise or equipment" value="${esc(state.picker.search)}" />
+  <div class="chips">${eq.map(e=>`<button class="equipment-chip ${state.picker.equipment===e?'active':''}" data-eq="${e}">${e}</button>`).join('')}</div>
+  <div class="picker-list" id="pickerList">${pickerListHtml()}</div></div></div>`;
+}
+function pickerListHtml(){
+  const p=state.picker; const q=p.search.toLowerCase();
+  const list=EXERCISES.filter(x=>(p.category==='all'||x.cat===p.category)&&(p.equipment==='all'||x.eq===p.equipment)&&(!q||x.name.toLowerCase().includes(q)||x.eq.includes(q)||x.cat.includes(q)));
+  return list.length?list.map((x,i)=>`<button class="picker-item" data-pick="${EXERCISES.indexOf(x)}"><div><strong>${esc(x.name)}</strong><small>${x.cat} • ${x.eq}</small></div><div class="picker-plus">+</div></button>`).join(''):`<div class="empty"><strong>No exercises</strong><p>Change the filters or search.</p></div>`;
+}
+
+function wireModal(){
+  if(!state.modal) return;
+  if($('#closeModal')) $('#closeModal').onclick=()=>{state.modal=null;render();};
+  if($('#backdrop')) $('#backdrop').onclick=e=>{if(e.target.id==='backdrop'){state.modal=null;render();}};
+  const m=state.modal;
+  if(m.type==='client'){
+    $('#clientForm').onsubmit=e=>{e.preventDefault(); const name=$('#clientName').value.trim(), note=$('#clientNote').value.trim();
+      let client;
+      if(m.clientId){client=state.data.clients.find(x=>x.id===m.clientId);client.name=name;client.note=note;} else {client={id:uid(),name,note,archived:false,createdAt:new Date().toISOString()};state.data.clients.push(client);}
+      saveClient(client);state.modal=null;render();toast(m.clientId?'Client saved':'Client added');};
+    if($('#archiveClient')) $('#archiveClient').onclick=()=>{const c=state.data.clients.find(x=>x.id===m.clientId);c.archived=true;saveClient(c);state.modal=null;state.view='clients';render();toast('Client archived');};
+  }
+  if(m.type==='clientNote') $('#clientNoteForm').onsubmit=e=>{e.preventDefault();const c=currentClient();c.note=$('#clientNoteText').value.trim();saveClient(c);state.modal=null;render();toast('Client note saved');};
+  if(m.type==='sessionNote') $('#sessionNoteForm').onsubmit=e=>{e.preventDefault();const s=currentSession();s.sessionNote=$('#sessionNoteText').value.trim();saveSession(s);state.modal=null;render();toast('Session note saved');};
+  if(m.type==='exerciseNote') $('#exerciseNoteForm').onsubmit=e=>{e.preventDefault();const s=currentSession();s.exercises[m.index].note=$('#exerciseNoteText').value.trim();saveSession(s);state.modal=null;render();toast('Exercise note saved');};
+  if(m.type==='picker') wirePicker();
+  if(m.type==='upgrade') $('#prototypeUpgrade').onclick=()=>{state.modal=null;render();toast('Billing connection is not active yet');};
+}
+function wirePicker(){
+  document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{state.picker.category=b.dataset.cat;render();});
+  document.querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>{state.picker.equipment=b.dataset.eq;render();});
+  $('#exerciseSearch').oninput=e=>{state.picker.search=e.target.value;$('#pickerList').innerHTML=pickerListHtml();wirePickerItems();};
+  wirePickerItems();
+}
+function wirePickerItems(){
+  document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
+    const x=EXERCISES[+b.dataset.pick], s=currentSession();
+    const previous=state.picker.replaceIndex===null?null:s.exercises[state.picker.replaceIndex];
+    const setCount=Math.max(1, previous?.sets?.length || 3);
+    const ex={id:uid(),name:x.name,cat:x.cat,eq:x.eq,weight:'',sets:Array(setCount).fill(null),note:''};
+    if(state.picker.replaceIndex===null) s.exercises.push(ex); else s.exercises[state.picker.replaceIndex]=ex;
+    saveSession(s);state.modal=null;render();toast(state.picker.replaceIndex===null?'Exercise added':'Exercise changed');
+  });
+}
+
+start();
+
+  </script>
+</body>
+</html>
