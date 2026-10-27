@@ -91,7 +91,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.4.5';
+const APP_VERSION = '0.4.6';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -270,7 +270,8 @@ function renderLogin(message=''){
     const email=$('#email').value.trim().toLowerCase();
     if(!email){ return renderLogin('Enter your email first, then tap Forgot password.'); }
     try{
-      await api('/auth/v1/recover',{method:'POST',body:{email}});
+      const redirectTo='https://members.chrisjanke.com/reset-password';
+      await api('/auth/v1/recover?redirect_to='+encodeURIComponent(redirectTo),{method:'POST',body:{email}});
       renderLogin('Password reset requested. Check your email for the reset link, then return here and sign in.');
     }catch(error){
       renderLogin(error.message || 'Could not request a password reset.');
