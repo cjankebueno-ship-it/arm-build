@@ -91,7 +91,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.8.0';
+const APP_VERSION = '0.9.0';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -351,29 +351,37 @@ function csvBool(value){
 
 
 function clientMatchKey(name){
-  let key=String(name||'').toLowerCase()
-    .replace(/\([^)]*\)/g,' ')
+  const raw=String(name||'').toLowerCase();
+  let key=raw
+    .replace(/[()"'’“”]/g,' ')
     .replace(/[^a-z0-9]+/g,' ')
     .trim()
     .replace(/\s+/g,' ');
+
+  const tokens=new Set(key.split(' ').filter(Boolean));
+
+  // Strong identity rules for known aliases.
+  if(tokens.has('wiener') && (tokens.has('trish') || tokens.has('patricia'))) return 'patricia wiener';
+  if(tokens.has('kusumo') && (tokens.has('leo') || tokens.has('leonardo'))) return 'leonardo kusumo';
+  if(tokens.has('gold') && (tokens.has('jim') || tokens.has('james'))) return 'james gold';
+  if(tokens.has('bott') && (tokens.has('jaime') || tokens.has('jamie'))) return 'jaime bott';
+
   const aliases={
     'trish':'patricia wiener',
     'patricia wiener':'patricia wiener',
-    'trish patricia wiener':'patricia wiener',
-    'patricia trish wiener':'patricia wiener',
     'jaime':'jaime bott',
+    'jamie':'jaime bott',
     'jaime bott':'jaime bott',
+    'jamie bott':'jaime bott',
     'leo':'leonardo kusumo',
     'leonardo':'leonardo kusumo',
-    'leo leonardo kusumo':'leonardo kusumo',
-    'leonardo leo kusumo':'leonardo kusumo',
+    'leonardo kusumo':'leonardo kusumo',
     'jim':'james gold',
-    'james gold':'james gold',
-    'jim james gold':'james gold'
+    'james':'james gold',
+    'james gold':'james gold'
   };
   return aliases[key] || key;
 }
-
 
 function canonicalClientName(name){
   const key=clientMatchKey(name);
@@ -469,7 +477,8 @@ function aiExerciseToApp(ex){
     eq:String(ex?.equipment||'').trim().toLowerCase()||'other',
     weight:String(ex?.weight??'').trim(),
     sets:sets.length?sets:[null,null,null],
-    note:String(ex?.note||'').trim()
+    note:String(ex?.note||'').trim(),
+    progressAt:Number.isFinite(Number(ex?.progressAt))?Number(ex.progressAt):TARGET_REPS
   };
 }
 
@@ -554,6 +563,22 @@ async function importSmartHistory(parsed){
 
   await mergeDuplicateClients();
   return {importedSessions,importedClients};
+}
+
+function activeClientsForDisplay(){
+  const groups=new Map();
+  for(const client of state.data.clients.filter(c=>!c.archived)){
+    const key=clientMatchKey(client.name);
+    if(!groups.has(key)){
+      groups.set(key,client);
+      continue;
+    }
+    const current=groups.get(key);
+    const currentSessions=state.data.sessions.filter(s=>s.clientId===current.id).length;
+    const challengerSessions=state.data.sessions.filter(s=>s.clientId===client.id).length;
+    if(challengerSessions>currentSessions) groups.set(key,client);
+  }
+  return [...groups.values()];
 }
 
 async function refreshClientRosterForImport(){
@@ -701,7 +726,7 @@ async function handleClientCsv(file){
 }
 
 function renderClients(){
-  const clients = state.data.clients.filter(c=>!c.archived);
+  const clients = activeClientsForDisplay();
   $('#screen').innerHTML = `
     <div class="page-title">
       <div><h1>Clients</h1><p>${clients.length} active ${clients.length===1?'client':'clients'}</p></div>
@@ -781,8 +806,39 @@ function renderWorkout(){
   wireExerciseCards(session);
 }
 
+function exerciseProgressAt(ex){
+  const n=parseInt(ex?.progressAt,10);
+  return Number.isFinite(n) && n>0 ? n : TARGET_REPS;
+}
+
+function exerciseReadyToProgress(ex){
+  const target=exerciseProgressAt(ex);
+  const logged=(ex?.sets||[])
+    .filter(v=>v!==null && v!==undefined && Number.isFinite(Number(v)))
+    .map(Number);
+  return logged.length>0 && logged.every(v=>v>=target);
+}
+
+function formatHistoryWeight(value){
+  const raw=String(value??'').trim();
+  if(!raw) return 'Weight not recorded';
+  if(/\b(?:lb|lbs|kg|kgs)\b/i.test(raw)) return raw;
+  return raw+' lbs';
+}
+
+function historyExerciseSummary(ex){
+  const weight=formatHistoryWeight(ex?.weight);
+  const reps=(ex?.sets||[])
+    .filter(v=>v!==null && v!==undefined && Number.isFinite(Number(v)))
+    .map(Number);
+  if(reps.length) return reps.map(r=>weight+' × '+r+' reps').join(' • ');
+  return weight+' × reps not recorded';
+}
+
 function exerciseHtml(ex,i){
   const sets=ex.sets?.length?ex.sets:[null,null,null];
+  const progressAt=exerciseProgressAt(ex);
+  const ready=exerciseReadyToProgress(ex);
   return `<div class="exercise-card" data-ex-index="${i}">
     <div class="exercise-head">
       <div class="exercise-title"><h3>${esc(ex.name)}</h3><div class="exercise-meta">${esc(ex.cat)} • ${esc(ex.eq)}</div></div>
@@ -792,6 +848,10 @@ function exerciseHtml(ex,i){
       <div class="weight-box"><input inputmode="decimal" value="${ex.weight??''}" placeholder="—" data-weight="${i}"/><span>lb</span></div>
       <div class="set-circles">${sets.map((r,j)=>`<button class="set-circle ${r!==null?'logged':''}" data-set="${i}:${j}" aria-label="Set ${j+1}">${r===null?'':r}</button>`).join('')}<button class="set-add" data-addset="${i}">+</button></div>
     </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <button class="small-btn" data-progress="${i}">Add weight at ${progressAt} reps</button>
+      ${ready?'<span style="font-size:12px;font-weight:900;color:#9ee6b5">↑ Add weight next time</span>':''}
+    </div>
     <div class="exercise-footer"><div class="mini-note">${ex.note?esc(ex.note):'No exercise note'}</div><button class="remove-ex" data-remove="${i}" title="Remove">×</button></div>
   </div>`;
 }
@@ -799,11 +859,12 @@ function exerciseHtml(ex,i){
 function wireExerciseCards(session){
   document.querySelectorAll('[data-set]').forEach(btn=>btn.onclick=()=>{
     const [i,j]=btn.dataset.set.split(':').map(Number); let v=session.exercises[i].sets[j];
-    if(v===null) v=TARGET_REPS; else if(v>1) v--; else v=null;
+    if(v===null) v=exerciseProgressAt(session.exercises[i]); else if(v>1) v--; else v=null;
     session.exercises[i].sets[j]=v; saveSession(session);
     btn.textContent=v===null?'':v; btn.classList.toggle('logged',v!==null);
   });
   document.querySelectorAll('[data-weight]').forEach(inp=>inp.onchange=()=>{session.exercises[+inp.dataset.weight].weight=inp.value;saveSession(session);toast('Weight saved');});
+  document.querySelectorAll('[data-progress]').forEach(b=>b.onclick=()=>{state.modal={type:'progressionTarget',index:+b.dataset.progress};render();});
   document.querySelectorAll('[data-change]').forEach(b=>b.onclick=()=>openPicker(+b.dataset.change));
   document.querySelectorAll('[data-addset]').forEach(b=>b.onclick=()=>{session.exercises[+b.dataset.addset].sets.push(null);saveSession(session);render();});
   document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{session.exercises.splice(+b.dataset.remove,1);saveSession(session);render();});
@@ -913,11 +974,40 @@ function modalHtml(){
     const slots=Math.max(0,FREE_CLIENT_LIMIT-m.activeNow);
     return modalWrap('Free plan limit',`<div class="settings-card"><h3>CSV import would exceed 3 active clients</h3><p>You have ${m.activeNow} active client${m.activeNow===1?'':'s'} and this file adds ${m.activeComing}. Your free plan has ${slots} active slot${slots===1?'':'s'} left.</p></div><button class="primary-btn full" id="csvSeeFounderRate">See Founder Rate</button>`);
   }
+  if(m.type==='progressionTarget') {
+    document.querySelectorAll('[data-progress-choice]').forEach(b=>b.onclick=()=>{
+      $('#progressionTarget').value=b.dataset.progressChoice;
+      document.querySelectorAll('[data-progress-choice]').forEach(x=>x.classList.toggle('active',x===b));
+    });
+    $('#progressionForm').onsubmit=e=>{
+      e.preventDefault();
+      const n=Math.max(1,parseInt($('#progressionTarget').value,10)||TARGET_REPS);
+      const s=currentSession();
+      s.exercises[m.index].progressAt=n;
+      saveSession(s);
+      state.modal=null;
+      render();
+      toast('Progression target saved');
+    };
+  }
   if(m.type==='clientNote'){
     const c=currentClient(); return modalWrap('Client note',`<form id="clientNoteForm"><div class="field"><textarea id="clientNoteText" placeholder="Important things to remember…" autofocus>${esc(c.note||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
   }
   if(m.type==='sessionNote'){
     const s=currentSession(); return modalWrap('Session notes',`<form id="sessionNoteForm"><div class="field"><textarea id="sessionNoteText" placeholder="How did today go?">${esc(s.sessionNote||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
+  }
+  if(m.type==='progressionTarget'){
+    const ex=currentSession().exercises[m.index];
+    const current=exerciseProgressAt(ex);
+    return modalWrap('Add weight at',`<form id="progressionForm">
+      <p class="muted">${esc(ex.name)}</p>
+      <div class="chips">
+        ${[5,8,10,12,15,20].map(v=>`<button type="button" class="category-chip ${current===v?'active':''}" data-progress-choice="${v}">${v} reps</button>`).join('')}
+      </div>
+      <div class="field"><label>Custom reps</label><input id="progressionTarget" inputmode="numeric" type="number" min="1" max="100" value="${current}" /></div>
+      <button class="primary-btn full" type="submit">Save threshold</button>
+      <p class="tiny">When every logged set reaches this rep target, Trainer Floor will flag “Add weight next time.” It will never change the weight automatically.</p>
+    </form>`);
   }
   if(m.type==='exerciseNote'){
     const ex=currentSession().exercises[m.index]; return modalWrap('Exercise note',`<form id="exerciseNoteForm"><p class="muted">${esc(ex.name)}</p><div class="field"><textarea id="exerciseNoteText" placeholder="Cue, pain, setup, progression…">${esc(ex.note||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
@@ -942,7 +1032,7 @@ function modalHtml(){
 <p class="tiny">Checkout is not active yet. The price will only advance after a completed paid subscription once billing is connected.</p>`);
   if(m.type==='history'){
     const s=state.data.sessions.find(x=>x.id===m.sessionId); const c=state.data.clients.find(x=>x.id===s?.clientId);
-    return modalWrap(`${esc(c?.name||'Session')}`,`<p class="muted">${s?((s.sessionNote||'').startsWith('[DATE UNKNOWN]')?'Historical session — exact date unknown':new Date(s.completedAt).toLocaleString()):''}</p>${s?.sessionNote?`<div class="note-card"><div class="note-label">Session note</div><div class="note-text">${esc(s.sessionNote)}</div></div>`:''}<div class="client-list">${(s?.exercises||[]).map(ex=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(ex.name)}</div><div class="client-sub">${ex.weight?esc(ex.weight)+' lb • ':''}${ex.sets.filter(v=>v!==null).join(', ')||'No reps logged'}</div></div></div>`).join('')}</div>`);
+    return modalWrap(`${esc(c?.name||'Session')}`,`<p class="muted">${s?((s.sessionNote||'').startsWith('[DATE UNKNOWN]')?'Historical session — exact date unknown':new Date(s.completedAt).toLocaleString()):''}</p>${s?.sessionNote?`<div class="note-card"><div class="note-label">Session note</div><div class="note-text">${esc(s.sessionNote)}</div></div>`:''}<div class="client-list">${(s?.exercises||[]).map(ex=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(ex.name)}</div><div class="client-sub">${esc(historyExerciseSummary(ex))}</div></div></div>`).join('')}</div>`);
   }
   return '';
 }
@@ -1102,7 +1192,7 @@ function wirePickerItems(){
     const x=EXERCISES[+b.dataset.pick], s=currentSession();
     const previous=state.picker.replaceIndex===null?null:s.exercises[state.picker.replaceIndex];
     const setCount=Math.max(1, previous?.sets?.length || 3);
-    const ex={id:uid(),name:x.name,cat:x.cat,eq:x.eq,weight:'',sets:Array(setCount).fill(null),note:''};
+    const ex={id:uid(),name:x.name,cat:x.cat,eq:x.eq,weight:'',sets:Array(setCount).fill(null),note:'',progressAt:previous?.progressAt||TARGET_REPS};
     if(state.picker.replaceIndex===null) s.exercises.push(ex); else s.exercises[state.picker.replaceIndex]=ex;
     saveSession(s);state.modal=null;render();toast(state.picker.replaceIndex===null?'Exercise added':'Exercise changed');
   });
