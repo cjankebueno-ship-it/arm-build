@@ -91,7 +91,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.4.6';
+const APP_VERSION = '0.5.0';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -314,13 +314,93 @@ function render(){
   wireModal();
 }
 
+
+function parseCsv(text){
+  const rows=[]; let row=[], field='', quoted=false;
+  text=String(text||'').replace(/^\uFEFF/,'');
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(ch==='"'){
+      if(quoted && text[i+1]==='"'){ field+='"'; i++; }
+      else quoted=!quoted;
+    }else if(ch===',' && !quoted){
+      row.push(field); field='';
+    }else if((ch==='\n' || ch==='\r') && !quoted){
+      if(ch==='\r' && text[i+1]==='\n') i++;
+      row.push(field); field='';
+      if(row.some(v=>String(v).trim()!=='')) rows.push(row);
+      row=[];
+    }else{
+      field+=ch;
+    }
+  }
+  if(field!=='' || row.length){ row.push(field); if(row.some(v=>String(v).trim()!=='')) rows.push(row); }
+  if(rows.length<2) return [];
+  const headers=rows[0].map(h=>String(h).trim().toLowerCase());
+  return rows.slice(1).map(cols=>{
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=String(cols[i]??'').trim());
+    return obj;
+  });
+}
+
+function csvBool(value){
+  return ['true','1','yes','y'].includes(String(value||'').trim().toLowerCase());
+}
+
+async function handleClientCsv(file){
+  if(!file) return;
+  try{
+    const parsed=parseCsv(await file.text());
+    if(!parsed.length){ toast('CSV has no client rows'); return; }
+    const nameKey=['name','client','client name','client_name'].find(k=>Object.prototype.hasOwnProperty.call(parsed[0],k));
+    if(!nameKey){ toast('CSV needs a name column'); return; }
+
+    const existing=new Set(state.data.clients.map(c=>c.name.trim().toLowerCase()));
+    const seen=new Set();
+    let duplicates=0;
+    const rows=[];
+
+    parsed.forEach(r=>{
+      const name=String(r[nameKey]||'').trim();
+      if(!name) return;
+      const key=name.toLowerCase();
+      if(existing.has(key) || seen.has(key)){ duplicates++; return; }
+      seen.add(key);
+      rows.push({
+        name,
+        note:String(r.note||r.notes||'').trim(),
+        archived:csvBool(r.archived)
+      });
+    });
+
+    const activeNow=state.data.clients.filter(c=>!c.archived).length;
+    const activeComing=rows.filter(r=>!r.archived).length;
+    if(state.data.plan==='free' && activeNow+activeComing>FREE_CLIENT_LIMIT){
+      state.modal={type:'csvLimit',activeNow,activeComing};
+      render();
+      return;
+    }
+
+    state.modal={type:'csvImport',rows,duplicates,total:parsed.length,fileName:file.name};
+    render();
+  }catch(error){
+    console.error(error);
+    toast('Could not read CSV');
+  }
+}
+
 function renderClients(){
   const clients = state.data.clients.filter(c=>!c.archived);
   $('#screen').innerHTML = `
     <div class="page-title">
       <div><h1>Clients</h1><p>${clients.length} active ${clients.length===1?'client':'clients'}</p></div>
-      <button id="addClient" class="primary-btn">+ Client</button>
+      <div class="row">
+        <button id="importClients" class="ghost-btn">Import CSV</button>
+        <button id="addClient" class="primary-btn">+ Client</button>
+      </div>
     </div>
+    <input id="clientCsvInput" type="file" accept=".csv,text/csv" hidden />
     <input id="clientSearch" class="search" placeholder="Search clients" />
     <div class="client-list" id="clientList"></div>`;
   const draw=(q='')=>{
@@ -338,6 +418,8 @@ function renderClients(){
   draw();
   $('#clientSearch').oninput=e=>draw(e.target.value);
   $('#addClient').onclick=()=>openClientModal();
+  $('#importClients').onclick=()=>$('#clientCsvInput').click();
+  $('#clientCsvInput').onchange=e=>{const file=e.target.files?.[0];e.target.value='';handleClientCsv(file);};
 }
 
 function openClient(id){ state.selectedClientId=id; ensureTodaySession(id); state.view='workout'; render(); }
@@ -477,6 +559,20 @@ function modalHtml(){
     const c=m.clientId?state.data.clients.find(x=>x.id===m.clientId):null;
     return modalWrap(`${c?'Edit':'Add'} client`, `<form id="clientForm"><div class="field"><label>Name</label><input id="clientName" value="${esc(c?.name||'')}" required autofocus /></div><div class="field"><label>Client note</label><textarea id="clientNote" placeholder="Injuries, goals, coaching cues…">${esc(c?.note||'')}</textarea></div><button class="primary-btn full" type="submit">${c?'Save client':'Add client'}</button>${c?'<button class="danger-btn full" id="archiveClient" type="button">Archive client</button>':''}</form>`);
   }
+  if(m.type==='csvImport'){
+    const preview=m.rows.slice(0,6);
+    return modalWrap('Import clients',`<p class="muted">${esc(m.fileName)} • ${m.total} CSV rows</p>
+      <div class="settings-card">
+        <div class="settings-row"><div><h3>${m.rows.length} ready to import</h3><p>${m.duplicates} duplicate${m.duplicates===1?'':'s'} will be skipped.</p></div></div>
+      </div>
+      <div class="client-list">${preview.map(r=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(r.name)}</div><div class="client-sub">${r.archived?'Archived':'Active'}${r.note?' • note included':''}</div></div></div>`).join('')}${m.rows.length>preview.length?`<div class="muted" style="padding:8px 2px">+${m.rows.length-preview.length} more</div>`:''}</div>
+      <button class="primary-btn full" id="confirmCsvImport" ${m.rows.length?'':'disabled'}>Import ${m.rows.length} client${m.rows.length===1?'':'s'}</button>
+      <p class="tiny">Expected columns: <strong>name</strong>, <strong>note</strong>, <strong>archived</strong>. Duplicate client names are skipped.</p>`);
+  }
+  if(m.type==='csvLimit'){
+    const slots=Math.max(0,FREE_CLIENT_LIMIT-m.activeNow);
+    return modalWrap('Free plan limit',`<div class="settings-card"><h3>CSV import would exceed 3 active clients</h3><p>You have ${m.activeNow} active client${m.activeNow===1?'':'s'} and this file adds ${m.activeComing}. Your free plan has ${slots} active slot${slots===1?'':'s'} left.</p></div><button class="primary-btn full" id="csvSeeFounderRate">See Founder Rate</button>`);
+  }
   if(m.type==='clientNote'){
     const c=currentClient(); return modalWrap('Client note',`<form id="clientNoteForm"><div class="field"><textarea id="clientNoteText" placeholder="Important things to remember…" autofocus>${esc(c.note||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
   }
@@ -538,6 +634,30 @@ function wireModal(){
       saveClient(client);state.modal=null;render();toast(m.clientId?'Client saved':'Client added');};
     if($('#archiveClient')) $('#archiveClient').onclick=()=>{const c=state.data.clients.find(x=>x.id===m.clientId);c.archived=true;saveClient(c);state.modal=null;state.view='clients';render();toast('Client archived');};
   }
+  if(m.type==='csvImport' && $('#confirmCsvImport')) $('#confirmCsvImport').onclick=async()=>{
+    const btn=$('#confirmCsvImport');
+    if(!m.rows.length) return;
+    btn.disabled=true; btn.textContent='Importing…';
+    const now=new Date().toISOString();
+    const payload=m.rows.map(r=>({
+      id:uid(),
+      trainer_id:state.user.id,
+      name:r.name,
+      note:r.note||'',
+      archived:!!r.archived,
+      updated_at:now
+    }));
+    try{
+      await restInsert('tf_clients',payload);
+      state.data.clients.push(...payload.map(p=>({id:p.id,name:p.name,note:p.note,archived:p.archived,createdAt:now})));
+      state.modal=null; render(); toast(`Imported ${payload.length} client${payload.length===1?'':'s'}`);
+    }catch(error){
+      console.error(error);
+      btn.disabled=false; btn.textContent=`Import ${m.rows.length} client${m.rows.length===1?'':'s'}`;
+      toast(error.message || 'Import failed');
+    }
+  };
+  if(m.type==='csvLimit' && $('#csvSeeFounderRate')) $('#csvSeeFounderRate').onclick=()=>{state.modal={type:'upgrade'};render();};
   if(m.type==='clientNote') $('#clientNoteForm').onsubmit=e=>{e.preventDefault();const c=currentClient();c.note=$('#clientNoteText').value.trim();saveClient(c);state.modal=null;render();toast('Client note saved');};
   if(m.type==='sessionNote') $('#sessionNoteForm').onsubmit=e=>{e.preventDefault();const s=currentSession();s.sessionNote=$('#sessionNoteText').value.trim();saveSession(s);state.modal=null;render();toast('Session note saved');};
   if(m.type==='exerciseNote') $('#exerciseNoteForm').onsubmit=e=>{e.preventDefault();const s=currentSession();s.exercises[m.index].note=$('#exerciseNoteText').value.trim();saveSession(s);state.modal=null;render();toast('Exercise note saved');};
