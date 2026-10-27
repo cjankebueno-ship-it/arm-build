@@ -3,67 +3,224 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Trainer Floor — Founder Pricing</title>
+<title>Trainer Floor — Client Workout Tracking for Personal Trainers</title>
 <style>
-:root{--bg:#0b0b0c;--panel:#151517;--line:#2d2d31;--text:#f7f7f8;--muted:#9b9ba3;--blue:#4169E1;}
+:root{
+  --bg:#0b0b0c;
+  --panel:#151517;
+  --panel2:#101012;
+  --line:#2d2d31;
+  --text:#f7f7f8;
+  --muted:#9b9ba3;
+  --blue:#4169E1;
+  --blue2:#5B7CFF;
+}
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-main{max-width:760px;margin:0 auto;padding:32px 18px 70px}
+main{max-width:900px;margin:0 auto;padding:28px 18px 80px}
 a{color:inherit}
 .brand{font-size:28px;font-weight:950;letter-spacing:-.06em}.brand span{color:var(--blue)}
-.hero{padding:54px 0 34px}.eyebrow{font-size:12px;font-weight:900;letter-spacing:.11em;text-transform:uppercase;color:#8ea7ff}
-h1{font-size:52px;line-height:.98;letter-spacing:-.06em;margin:12px 0 16px}
-.lead{font-size:19px;line-height:1.5;color:#c1c1c8;max-width:650px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;margin-top:16px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.toprow{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.toplink{font-size:13px;color:#bfc7df;text-decoration:none}
+.hero{padding:68px 0 42px}
+.eyebrow{font-size:12px;font-weight:900;letter-spacing:.11em;text-transform:uppercase;color:#8ea7ff}
+h1{font-size:58px;line-height:.97;letter-spacing:-.065em;margin:12px 0 18px;max-width:820px}
+h2{font-size:30px;letter-spacing:-.035em;margin:0 0 10px}
+h3{font-size:18px;margin:0 0 8px;letter-spacing:-.02em}
+.lead{font-size:20px;line-height:1.52;color:#c6c6ce;max-width:720px}
+.sublead{font-size:15px;line-height:1.55;color:var(--muted);max-width:700px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.btn{display:inline-block;border-radius:12px;padding:13px 17px;text-decoration:none;font-weight:900;border:1px solid var(--line);background:#1c1c20}
+.btn.primary{background:var(--blue);border-color:var(--blue)}
+.btn:hover{transform:translateY(-1px)}
+.micro{font-size:12px;color:#777d8e;margin-top:10px}
+.section{padding:28px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px}
+.benefits{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:18px}
+.benefit{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:19px}
+.benefit-icon{width:34px;height:34px;border-radius:10px;background:#111a3a;color:#b8c6ff;display:grid;place-items:center;font-weight:950;margin-bottom:12px}
+.benefit p{margin:0;color:#aeb0ba;font-size:14px;line-height:1.5}
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.step{background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:16px}
+.step-num{font-size:12px;color:#8ea7ff;font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.demo{background:#0f1117;border:1px solid #2d3757;border-radius:18px;padding:18px;margin-top:18px}
+.demo-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.weight{border:1px solid #353a4d;border-radius:12px;padding:12px 14px;font-weight:900}
+.dot{width:48px;height:48px;border-radius:50%;border:2px solid var(--blue);display:grid;place-items:center;font-weight:950;background:var(--blue);color:white}
+.progress{font-size:13px;color:#a9b8ff;font-weight:900}
+.import-card{background:#11141c;border:1px solid #30447f;border-radius:20px;padding:22px}
+.import-card strong{color:#fff}
+.price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
 .tier{background:#101012;border:1px solid var(--line);border-radius:15px;padding:16px;text-align:center}
 .tier.current{border-color:#3551a8;background:#111a3a}
 .price{font-size:30px;font-weight:950}.tier small{display:block;color:var(--muted);margin-top:5px;line-height:1.35}
-.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
-.btn{display:inline-block;border-radius:12px;padding:13px 16px;text-decoration:none;font-weight:900;border:1px solid var(--line);background:#1c1c20}
-.btn.primary{background:var(--red);border-color:var(--red)}
-ul{color:#c5c5cd;line-height:1.65;padding-left:20px}
+ul{color:#c5c5cd;line-height:1.7;padding-left:20px}
 .note{font-size:13px;color:var(--muted);line-height:1.5}
-@media(max-width:640px){h1{font-size:40px}.grid{grid-template-columns:repeat(2,1fr)}}
+.quote{border-left:3px solid var(--blue);padding:2px 0 2px 15px;color:#c8cad3;font-size:16px;line-height:1.55;margin-top:18px}
+@media(max-width:700px){
+  h1{font-size:43px}
+  .benefits,.flow{grid-template-columns:1fr}
+  .price-grid{grid-template-columns:repeat(2,1fr)}
+}
 </style>
 </head>
 <body>
 <main>
-  <div class="brand">TRAINER<span>•</span>FLOOR</div>
+  <div class="toprow">
+    <div class="brand">TRAINER<span>•</span>FLOOR</div>
+    <a class="toplink" href="./index.html">Sign in</a>
+  </div>
 
   <section class="hero">
-    <div class="eyebrow">Founder pricing</div>
-    <h1>Same product. Earlier trainers lock a lower rate.</h1>
-    <p class="lead">Trainer Floor is free for up to 3 active clients. When a trainer is ready to upgrade, the price depends only on which founder cohort still has room — not on features, usage tricks, or confusing add-ons.</p>
-
-    <div class="grid">
-      <div class="tier current"><div class="price">$25</div><strong>Founding 25</strong><small>Paid trainers 1–25</small></div>
-      <div class="tier"><div class="price">$50</div><strong>Early Founders</strong><small>Paid trainers 26–50</small></div>
-      <div class="tier"><div class="price">$75</div><strong>Launch Founders</strong><small>Paid trainers 51–100</small></div>
-      <div class="tier"><div class="price">$99</div><strong>Standard</strong><small>Trainer 101+</small></div>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2 style="margin-top:0">Why the cohorts exist</h2>
-    <ul>
-      <li>Early trainers help shape the product, so they keep an earlier price.</li>
-      <li>When a cohort fills, new trainers move to the next published rate.</li>
-      <li>Every cohort gets the same Trainer Floor product.</li>
-      <li>Your monthly rate stays locked while your subscription remains active.</li>
-      <li>$99/month is the permanent standard-price cap.</li>
-    </ul>
-    <p class="note">No fake countdowns or hidden price jumps. The only scarcity is the published number of spots in each founder cohort.</p>
-  </section>
-
-  <section class="card">
-    <h2 style="margin-top:0">Start without moving your business manually</h2>
-    <p class="lead" style="font-size:16px">Smart Import can take a CSV, old workout notes, pasted text, or even a bulk summary from ChatGPT, Claude, or Gemini. Trainer Floor organizes clients, past workouts, weights, sets, reps, and notes for review.</p>
+    <div class="eyebrow">Built for personal trainers</div>
+    <h1>Run the workout. Remember everything. Type almost nothing.</h1>
+    <p class="lead">Trainer Floor is a fast client workout tracker designed for the actual gym floor — where you need to coach the person in front of you, not fight with spreadsheets, notes apps, or complicated software.</p>
     <div class="row">
-      <a class="btn primary" href="./index.html">Open Trainer Floor</a>
-      <a class="btn" href="./index.html">Create trainer account</a>
+      <a class="btn primary" href="./index.html">Try Trainer Floor</a>
+      <a class="btn" href="#how-it-works">See how it works</a>
     </div>
-    <p class="note">Billing is not active in this prototype yet. Creating an account does not charge a card.</p>
+    <p class="micro">Free for up to 3 active clients. No billing is active in the prototype.</p>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Why trainers need it</div>
+    <h2>Your client history should be useful while you're coaching.</h2>
+    <p class="sublead">Trainer Floor keeps the information you actually need — previous weights, reps, notes, progression targets, and completed workouts — one tap away.</p>
+
+    <div class="benefits">
+      <div class="benefit">
+        <div class="benefit-icon">●</div>
+        <h3>Log sets with one tap</h3>
+        <p>Tap a circle to record reps. No tiny spreadsheet cells, repeated typing, or stopping the session to enter data.</p>
+      </div>
+
+      <div class="benefit">
+        <div class="benefit-icon">↑</div>
+        <h3>Know when to progress</h3>
+        <p>Each exercise can have its own “Add weight at” rep target. When the client reaches it across their sets, Trainer Floor flags the next progression.</p>
+      </div>
+
+      <div class="benefit">
+        <div class="benefit-icon">↺</div>
+        <h3>See what happened last time</h3>
+        <p>Past sessions keep the useful detail: exercise, weight, reps, date, and coaching notes — for example, 45 lbs × 12 reps.</p>
+      </div>
+
+      <div class="benefit">
+        <div class="benefit-icon">✎</div>
+        <h3>Remember the coaching details</h3>
+        <p>Keep persistent client notes and exercise-specific cues so important limitations, setup changes, and coaching discoveries don't disappear.</p>
+      </div>
+
+      <div class="benefit">
+        <div class="benefit-icon">+</div>
+        <h3>Change the workout on the fly</h3>
+        <p>Add exercises, remove them, change weights, or change set counts during the session without rebuilding the whole program.</p>
+      </div>
+
+      <div class="benefit">
+        <div class="benefit-icon">1</div>
+        <h3>One place for every client</h3>
+        <p>In-person, online, gym, independent, or private-residence clients can live in the same simple roster and history instead of separate systems.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how-it-works">
+    <div class="card">
+      <div class="eyebrow">Gym-floor workflow</div>
+      <h2>Open the client. Coach. Tap. Finish.</h2>
+      <p class="sublead">The product is intentionally built around what happens during a real session.</p>
+
+      <div class="flow">
+        <div class="step">
+          <div class="step-num">Step 1</div>
+          <strong>Choose the client</strong>
+          <p class="note">Their workout, notes, previous work, and progression settings are already there.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">Step 2</div>
+          <strong>Tap what they actually do</strong>
+          <p class="note">Adjust weight, reps, exercises, or sets in seconds while you keep coaching.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">Step 3</div>
+          <strong>Finish the session</strong>
+          <p class="note">The workout becomes history so the next session starts with context instead of memory.</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <strong>Example: Dumbbell Bench Press</strong>
+        <div class="demo-row">
+          <div class="weight">45 lbs</div>
+          <div class="dot">15</div>
+          <div class="dot">15</div>
+          <div class="dot">14</div>
+          <div class="progress">Add weight at 15 reps</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="import-card">
+      <div class="eyebrow">Smart Import</div>
+      <h2>Already have years of client data? Don't re-enter it.</h2>
+      <p class="lead" style="font-size:17px">Bring a CSV, exported workout history, old notes, or a bulk summary from ChatGPT, Claude, or Gemini. Trainer Floor can make sense of messy data and organize it into clients, past sessions, exercises, weights, sets, reps, and notes for you to review before saving.</p>
+      <div class="quote">You shouldn't have to abandon your history — or spend a weekend copying it — just to switch workout software.</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Built to stay simple</div>
+    <h2>Less admin between you and the client.</h2>
+    <div class="benefits">
+      <div class="benefit">
+        <h3>No giant setup project</h3>
+        <p>Add one client manually or use Smart Import to bring over a whole roster and old workout history.</p>
+      </div>
+      <div class="benefit">
+        <h3>No forced programming method</h3>
+        <p>Your progression threshold can be 5, 8, 10, 15 reps, or something else — and can differ exercise by exercise.</p>
+      </div>
+      <div class="benefit">
+        <h3>No feature-tier games</h3>
+        <p>Founder cohorts get the same product. Earlier trainers simply lock an earlier price.</p>
+      </div>
+      <div class="benefit">
+        <h3>Your records stay understandable</h3>
+        <p>History shows the things trainers naturally think in: weight × reps, exercise notes, client notes, and dates.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="pricing">
+    <div class="card">
+      <div class="eyebrow">Founder pricing</div>
+      <h2>Start free. Pay only when the roster grows.</h2>
+      <p class="sublead">Trainer Floor is free through 3 active clients. Early paid trainers can lock a founder rate while their subscription remains active. Everyone receives the same product.</p>
+
+      <div class="price-grid">
+        <div class="tier current"><div class="price">$25</div><strong>Founding 25</strong><small>Paid trainers 1–25</small></div>
+        <div class="tier"><div class="price">$50</div><strong>Early Founders</strong><small>Paid trainers 26–50</small></div>
+        <div class="tier"><div class="price">$75</div><strong>Launch Founders</strong><small>Paid trainers 51–100</small></div>
+        <div class="tier"><div class="price">$99</div><strong>Standard</strong><small>Trainer 101+</small></div>
+      </div>
+
+      <p class="note">When a cohort fills, new trainers move to the next published rate. No fake countdowns, no hidden feature differences, and $99/month is the permanent standard-price cap.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="card" style="text-align:center;padding:30px">
+      <h2>Spend the session coaching — not documenting the session.</h2>
+      <p class="sublead" style="margin-left:auto;margin-right:auto">Start with up to 3 active clients for free and see whether Trainer Floor makes your real training day easier.</p>
+      <div class="row" style="justify-content:center">
+        <a class="btn primary" href="./index.html">Open Trainer Floor</a>
+      </div>
+    </div>
   </section>
 </main>
 </body>
