@@ -1,34 +1,25 @@
-<!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trainer Floor — rest timer test</title>
-<style>
-body{margin:0;background:#25262b;color:#fff;font:14px system-ui;text-align:center}header{padding:12px}p{margin:6px}iframe{display:block;width:min(390px,100%);height:780px;border:0;margin:auto;background:#0b0b0c}button{padding:8px 12px;margin:4px;border:1px solid #777;border-radius:8px;background:#eee;color:#111}
-</style>
-<header><b>Rest timer test · sample data only</b><p>No account access or workout saves.</p><button data-offset="0">Live clock</button><button data-offset="30000">Advance 30 seconds</button><button data-offset="60000">Advance 60 seconds</button></header>
-<iframe title="Trainer Floor phone preview" sandbox="allow-scripts"></iframe>
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trainer Floor — sample preview</title>
+<style>body{margin:0;background:#25262b;color:#fff;font:14px system-ui;text-align:center}header{padding:12px}p{margin:6px}iframe{display:block;width:min(430px,100%);height:850px;border:0;margin:auto;background:#0b0b0c}button{padding:8px 12px;margin:4px;border:1px solid #777;border-radius:8px;background:#eee;color:#111}</style>
+<header><b>Trainer Floor preview · sample data only</b><p>No account access. Changes are kept only in this preview.</p><button data-offset="0">Live clock</button><button data-offset="30000">Advance 30 seconds</button><button data-offset="60000">Advance 60 seconds</button><button id="sampleImport">Review sample GPT import</button></header><iframe title="Trainer Floor phone preview" sandbox="allow-scripts"></iframe>
 <script>
 (async()=>{
-  const [html,history]=await Promise.all([
-    fetch('../trainer-floor/index.html?v=0.14.1',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('App unavailable');return r.text()}),
-    fetch('../trainer-floor/history.js?v=0.13.0',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('History helper unavailable');return r.text()})
-  ]);
-  const setup=`
-    let previewClockOffset=0;
-    const previewNow=Date.now.bind(Date);
-    Date.now=()=>previewNow()+previewClockOffset;
-    window.addEventListener('message',event=>{if(event.source===parent && event.data?.type==='preview-clock') previewClockOffset=Number(event.data.offset)||0;});
-    saveSession=()=>{};saveClient=()=>{};syncSession=async()=>{};syncClient=async()=>{};
-    window.fetch=async()=>{throw Error('Network disabled in test preview')};
-    state.user={id:'preview-trainer'};
-    state.selectedClientId='preview-client';state.view='workout';
-    state.data={plan:'pro',profile:{name:'Demo trainer',trainerNumber:1},clients:[{id:'preview-client',name:'Timer Test',note:'Sample data for checking the rest stopwatch.'}],sessions:[{id:'preview-session',clientId:'preview-client',date:todayKey(),completedAt:null,exercises:[{id:'preview-exercise',name:'Dumbbell Row',cat:'pull',eq:'dumbbells',weight:'20',sets:[null,null,null],progressAt:15}]}]};
-    render();
-  `;
-  if(!html.includes("const APP_VERSION = '0.14.1'")) throw Error('Expected app version 0.14.1 was not served');
-  document.querySelector('iframe').srcdoc=html.replace('<script src="history.js?v=0.13.0"><'+'/script>',()=>'<script>'+history+'<'+'/script>').replace(/\nstart\(\);/,()=> '\n'+setup);
-  document.querySelectorAll('[data-offset]').forEach(button=>button.onclick=()=>document.querySelector('iframe').contentWindow.postMessage({type:'preview-clock',offset:+button.dataset.offset},'*'));
+ const root='../trainer-floor/';
+ const read=async file=>{const response=await fetch(root+file,{cache:'no-store'});if(!response.ok)throw Error(file+' unavailable');return response.text();};
+ let html=await read('index.html');
+ for(const name of ['history','store','progress','features','import-ui','founder']){const code=await read(name+'.js');html=html.replace(new RegExp('<script src="'+name+'\\.js[^\"]*"><\\/script>'),()=>'<script>'+code+'<'+'/script>');}
+ const css=await read('features.css');html=html.replace(/<link[^>]*href="features.css[^>]*>/,()=>'<style>'+css+'</style>');
+ const setup=`
+ const demoMemory=new Map();deviceStorage.getItem=key=>demoMemory.get(key)||null;deviceStorage.setItem=(key,value)=>demoMemory.set(key,value);
+ let previewClockOffset=0;const previewNow=Date.now.bind(Date);Date.now=()=>previewNow()+previewClockOffset;
+ window.fetch=async()=>{throw Error('Network disabled in sample preview')};
+ saveSession=session=>{session.revision=(session.revision||0)+1;return true;};saveClient=client=>{client.revision=(client.revision||0)+1;return true;};syncSession=async session=>{session.revision=(session.revision||0)+1;};syncClient=async client=>{client.revision=(client.revision||0)+1;};restSelectAll=async table=>table==='tf_sessions'?state.data.sessions.map(s=>({id:s.id,client_id:s.clientId,session_date:s.date,workout:s.exercises,session_note:s.sessionNote,completed_at:s.completedAt,revision:s.revision})):[];
+ state.user={id:'preview-trainer'};state.selectedClientId='preview-client';state.view='workout';
+ state.data={plan:'pro',profile:{name:'Demo trainer',trainerNumber:1},clients:[{id:'preview-client',name:'Taylor Example',note:'Sample data only.',revision:1}],sessions:[{id:'preview-session',clientId:'preview-client',date:todayKey(),completedAt:null,revision:1,exercises:[{id:'preview-exercise',name:'Dumbbell Row',cat:'pull',eq:'dumbbells',weight:'25 lb',sets:[null,null,null],progressAt:12}]}]};
+ window.addEventListener('message',event=>{if(event.source!==parent)return;if(event.data?.type==='preview-clock')previewClockOffset=Number(event.data.offset)||0;if(event.data?.type==='preview-import')analyzeImportedData(JSON.stringify({clients:[{name:'Taylor Example',sessions:[{date:'2026-10-20',completed:false,exercises:[{name:'Dumbbell Row',weight:'25 lb',sets:[12,11,10]}]}]}]}),'Sample GPT history');});
+ render();
+ `;
+ if(!html.includes("const APP_VERSION = '0.16.0'"))throw Error('Expected version 0.16.0');
+ document.querySelector('iframe').srcdoc=html.replace(/\nstart\(\);/,()=> '\n'+setup);
+ const send=data=>document.querySelector('iframe').contentWindow.postMessage(data,'*');document.querySelectorAll('[data-offset]').forEach(button=>button.onclick=()=>send({type:'preview-clock',offset:+button.dataset.offset}));document.querySelector('#sampleImport').onclick=()=>send({type:'preview-import'});
 })().catch(error=>{document.querySelector('header').textContent=error.message;});
-</script>
-</html>
+</script></html>

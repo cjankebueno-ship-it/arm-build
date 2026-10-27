@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#0b0b0c" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  
+  <link rel="apple-touch-icon" href="icon-180.png" />
   <title>Trainer Floor</title>
   <style>
 :root{
@@ -72,11 +75,17 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 
 .last-workout{background:linear-gradient(135deg,#151e39,#11151e);border:1px solid #33487d;border-radius:16px;padding:16px;margin-bottom:16px}.last-workout p{font-size:14px;line-height:1.5;color:#c4cee7}.last-workout .note-label{font-size:12px;color:#a9bfff;font-weight:800}.previous-performance{padding:10px 12px;border-radius:10px;background:#101520;border-left:3px solid #4169e1;margin-top:12px;color:#b9c7eb;font-size:12px;line-height:1.55}.history-date{color:#a9bfff;font-size:13px;font-weight:700;margin-top:6px}.filter-label{display:block;color:var(--muted);font-size:12px;margin:0 0 7px}.import-session{border-top:1px solid var(--line);padding:10px 0;font-size:13px;line-height:1.5}details{margin-top:10px;font-size:13px;line-height:1.5}summary{cursor:pointer;color:#a9bfff}details .note-text{white-space:pre-wrap}.client-card>div:first-child{min-width:0}.client-sub{line-height:1.5;overflow-wrap:anywhere}@media(max-width:440px){.page-title{flex-wrap:wrap}.session-bar{flex-wrap:wrap}.header-actions .small-btn{padding:9px}.client-header h1{font-size:22px}}
 </style>
+<link rel="stylesheet" href="features.css?v=0.16.0" />
 </head>
 <body>
   <div id="app"></div>
   <div id="toast" class="toast" aria-live="polite"></div>
-  <script src="history.js?v=0.13.0"></script>
+  <script src="history.js?v=0.16.0"></script>
+  <script src="store.js?v=0.16.0"></script>
+  <script src="progress.js?v=0.16.0"></script>
+  <script src="features.js?v=0.16.0"></script>
+  <script src="import-ui.js?v=0.16.0"></script>
+  <script src="founder.js?v=0.16.0"></script>
   <script>
 const H = TrainerHistory;
 const SUPABASE_URL = 'https://srsuoehdnfzobzvtkldz.supabase.co';
@@ -87,21 +96,23 @@ function writeStoredSession(s){if(s)localStorage.setItem(SESSION_KEY,JSON.string
 async function api(path,{method='GET',body,token,headers={}}={}){
   const res=await fetch(SUPABASE_URL+path,{method,headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...headers},body:body===undefined?undefined:JSON.stringify(body)});
   const txt=await res.text(); let data=null; try{data=txt?JSON.parse(txt):null}catch{data=txt}
-  if(!res.ok){const msg=data?.msg||data?.message||data?.error_description||data?.error||('Request failed ('+res.status+')');throw new Error(msg)}
+  if(!res.ok){const msg=data?.msg||data?.message||data?.error_description||data?.error||('Request failed ('+res.status+')');const error=new Error(msg);error.status=res.status;throw error;}
   return {data,status:res.status,headers:res.headers};
 }
-async function refreshSession(s){if(!s?.refresh_token)return null;try{const {data}=await api('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:s.refresh_token}});writeStoredSession(data);return data}catch{writeStoredSession(null);return null}}
+let refreshPromise=null;
+async function refreshSession(s){if(!s?.refresh_token)return null;if(refreshPromise)return refreshPromise;refreshPromise=(async()=>{try{const {data}=await api('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:s.refresh_token}});writeStoredSession(data);return data}catch(e){if(e.status===400||e.status===401)writeStoredSession(null);throw e;}finally{refreshPromise=null;}})();return refreshPromise;}
 async function validSession(){
   let s=readStoredSession(); if(!s?.access_token)return null;
   if(s.expires_at && s.expires_at < Math.floor(Date.now()/1000)+30)s=await refreshSession(s);
   if(!s)return null;
   try{const {data:user}=await api('/auth/v1/user',{token:s.access_token});return {session:s,user}}
-  catch{ s=await refreshSession(s); if(!s)return null; try{const {data:user}=await api('/auth/v1/user',{token:s.access_token});return {session:s,user}}catch{writeStoredSession(null);return null}}
+  catch(e){if(e.status!==401&&e.status!==403)throw e;s=await refreshSession(s);if(!s)return null;const {data:user}=await api('/auth/v1/user',{token:s.access_token});return {session:s,user};}
 }
 function authToken(){return readStoredSession()?.access_token||''}
 async function freshAuthToken(){
   const current=await validSession();
   if(!current?.session?.access_token) throw new Error('Your session expired. Please sign in again.');
+  if(state.user && current.user && state.user.id!==current.user.id)throw new Error('Sign in to the same account to sync pending changes.');
   if(state.user && current.user) state.user=current.user;
   return current.session.access_token;
 }
@@ -136,7 +147,7 @@ const SB={auth:{
   async refreshSession(){const data=await refreshSession(readStoredSession());return {data:{session:data},error:data?null:new Error('Session refresh failed')}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.14.1';
+const APP_VERSION = '0.16.0';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -188,6 +199,7 @@ const state = {
   data: null,
   view: 'clients',
   selectedClientId: null,
+  selectedSessionId: null,
   historyClientId: '',
   historyQuery: '',
   modal: null,
@@ -295,45 +307,25 @@ async function loadRemote(user){
   const [clientsRows,sessionsRows]=await Promise.all([restSelectAll('tf_clients','select=*&order=created_at.asc,id.asc'),restSelectAll('tf_sessions','select=*&order=created_at.asc,id.asc')]);
   state.user=user;
   state.data={version:APP_VERSION,profile:{id:user.id,name:profile?.display_name||'Trainer',email:user.email||'',trainerNumber:profile?.trainer_number,createdAt:profile?.created_at},
-    clients:(clientsRows||[]).map(c=>({id:c.id,name:c.name,note:c.note||'',archived:c.archived,createdAt:c.created_at})),
-    sessions:(sessionsRows||[]).map(s=>({id:s.id,clientId:s.client_id,date:s.session_date,createdAt:s.created_at,completedAt:s.completed_at,sessionNote:s.session_note||'',exercises:Array.isArray(s.workout)?s.workout:[]})),
+    clients:(clientsRows||[]).map(clientFromRow),
+    sessions:(sessionsRows||[]).map(sessionFromRow),
     plan:profile?.plan||'free'};
-  await mergeDuplicateClients();
+  const store=initializeDeviceStore(user);state.data=store.hydrate(state.data);
+  await refreshExtras();await loadFounderReservation();scheduleSave(0);
 }
-const syncTimers = new Map();
-
-function scheduleSync(key, work, delay=180){
-  const existing = syncTimers.get(key);
-  if(existing) clearTimeout(existing);
-  const timer = setTimeout(async()=>{
-    syncTimers.delete(key);
-    try{ await work(); }
-    catch(error){ console.error(error); toast('Save failed — check connection'); }
-  }, delay);
-  syncTimers.set(key, timer);
-}
-
 async function syncClient(client){
-  if(!state.user || !client) return;
-  const payload={
-    id:client.id, trainer_id:state.user.id, name:client.name, note:client.note||'',
-    archived:!!client.archived, updated_at:new Date().toISOString()
-  };
-  await restUpsert('tf_clients',payload);
+  if(!state.user||!client)return;
+  const {data}=await authenticatedApi('/rest/v1/rpc/tf_save_record',{method:'POST',body:{p_kind:'client',p_record:recordPayload('client',client),p_expected_revision:client.revision||0,p_mutation_id:uid()}});
+  client.revision=data.revision;
 }
-
 async function syncSession(session){
-  if(!state.user || !session) return;
-  const payload={
-    id:session.id, trainer_id:state.user.id, client_id:session.clientId,
-    session_date:session.date, workout:session.exercises||[], session_note:session.sessionNote||'',
-    completed_at:session.completedAt||null, updated_at:new Date().toISOString()
-  };
-  await restUpsert('tf_sessions',payload);
+  if(!state.user||!session)return;
+  const {data}=await authenticatedApi('/rest/v1/rpc/tf_save_record',{method:'POST',body:{p_kind:'session',p_record:recordPayload('session',session),p_expected_revision:session.revision||0,p_mutation_id:uid()}});
+  session.revision=data.revision;
 }
 
-function saveClient(client){ scheduleSync(`client:${client.id}`,()=>syncClient(client)); }
-function saveSession(session){ scheduleSync(`session:${session.id}`,()=>syncSession(session)); }
+function saveClient(client){ return queueRecord('client',client); }
+function saveSession(session){ return queueRecord('session',session); }
 
 function toast(msg){
   const el = $('#toast');
@@ -344,24 +336,23 @@ function toast(msg){
 
 async function start(){
   renderLogin();
+  setupRecoveryEvents();setupInstallableApp();
+  const hadCache=restoreCachedUser();if(hadCache)render();
   try{
-    const restored = await Promise.race([
-      SB.auth.getSession(),
-      new Promise(resolve=>setTimeout(()=>resolve({data:{session:null}}),2500))
-    ]);
+    const restored = await SB.auth.getSession();
     const session = restored?.data?.session || null;
     if(session?.user){
       try{
         await loadRemote(session.user);
-        render();
+        render();openFounderIntent();
       }catch(e){
         console.error(e);
-        renderLogin('Signed in, but your trainer data could not load. Please sign in again.');
+        if(!hadCache)renderLogin('Your data could not load. Check your connection and sign in again.');
       }
-    }
+    }else if(!hadCache){renderLogin();}
   }catch(e){
     console.error(e);
-    renderLogin('Could not restore your previous session. Sign in to continue.');
+    if(!hadCache)renderLogin('Could not restore your previous session. Sign in to continue.');
   }
 }
 
@@ -383,7 +374,7 @@ function renderLogin(message=''){
           <button class="ghost-btn full" id="createAccount" type="button">Create trainer account</button>
           <button class="ghost-btn full" id="seePricing" type="button">See Founder Pricing</button>
         </form>
-        <p class="tiny">Free for up to 3 active clients. Founding 25 trainers can lock $25/month; later founder cohorts are $50 and $75 before the standard $99/month rate. Trainer #1 receives founder access.</p>
+        <p class="tiny">Free for up to 3 active clients. Unlimited-client plans: $19/month or $190/year. First 25 founder reservations protect your rate. No payment is taken during the beta.</p>
         <p class="build-label">Trainer Floor ${APP_VERSION}</p>
       </div>
     </div>`;
@@ -399,7 +390,8 @@ function renderLogin(message=''){
         : error.message;
       return renderLogin(msg);
     }
-    await loadRemote(data.user); render();
+    if(deviceStore?.status().pending && deviceStore.userId!==data.user.id){await SB.auth.signOut();return renderLogin('Sign in to the original account to sync its pending changes first.');}
+    try{await loadRemote(data.user); render();openFounderIntent();}catch(error){renderLogin(error.message||'Could not load your account. Try again.');}
   });
   $('#forgotPassword').onclick=async()=>{
     const email=$('#email').value.trim().toLowerCase();
@@ -420,7 +412,7 @@ function renderLogin(message=''){
     const btn=$('#createAccount'); btn.disabled=true; btn.textContent='Creating…';
     const {data,error}=await SB.auth.signUp({email,password,options:{data:{display_name:name}}});
     if(error){btn.disabled=false;btn.textContent='Create trainer account';return renderLogin(error.message);}
-    if(data.session && data.user){ await loadRemote(data.user); render(); }
+    if(data.session && data.user){ await loadRemote(data.user); render();openFounderIntent(); }
     else renderLogin('If this is a new email, check your inbox to confirm it. If you already used this email with ChrisJanke.com, use Sign in or Forgot password instead.');
   };
 }
@@ -437,6 +429,7 @@ function render(){
         </div>
       </header>
       <main id="screen" class="screen"></main>
+      <div class="save-strip"><button id="saveStatus" class="save-status" aria-live="polite">Saved</button><button id="appUpdate" class="small-btn" hidden>Update ready · reload</button></div>
       <nav class="bottom-nav">
         <button class="nav-btn ${state.view==='clients'||state.view==='workout'?'active':''}" data-nav="clients"><b>●</b>Clients</button>
         <button class="nav-btn ${state.view==='history'?'active':''}" data-nav="history"><b>↺</b>History</button>
@@ -448,6 +441,8 @@ function render(){
   if(state.view==='workout') renderWorkout();
   if(state.view==='history') renderHistory();
   if(state.view==='settings') renderSettings();
+  $('#saveStatus').onclick=()=>{state.modal={type:'saveStatus'};render();};renderSaveStatus();renderUpdateNotice();
+  document.querySelectorAll('[data-quick-client]').forEach(b=>b.onclick=()=>openClient(b.dataset.quickClient));
   wireModal();
 }
 
@@ -576,46 +571,7 @@ async function mergeDuplicateClients(){
   }
 }
 
-async function analyzeSmartHistory(text,filename='pasted notes'){
-  const raw=String(text||'').trim();
-  if(!raw){toast('Paste notes or choose a file');return;}
-  state.modal={type:'smartHistoryLoading',filename,progress:'Reading your records…'};render();
-  try{
-    let structured=null;
-    if(raw.startsWith('{') || raw.startsWith('[')){
-      try{structured=JSON.parse(raw);}catch{throw new Error('This JSON is incomplete or invalid. Upload the complete file.');}
-    }
-    let parsed;
-    if(structured && Array.isArray(structured.clients)){
-      parsed=H.normalize(structured);
-    }else{
-      const source=typeof structured?.master_note==='string'?structured.master_note:raw;
-      const chunks=H.splitNotes(source);
-      parsed={clients:[],warnings:[]};
-      for(let index=0;index<chunks.length;index++){
-        const chunk=chunks[index];
-        state.modal={type:'smartHistoryLoading',filename,progress:`Client ${index+1} of ${chunks.length}: ${chunk.name}`};render();
-        const request=async token=>fetch('https://members.chrisjanke.com/api/trainer-floor/parse-history',{
-          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({text:chunk.text,filename})
-        });
-        let response=await request(await freshAuthToken());
-        if(response.status===401){
-          const refreshed=await refreshSession(readStoredSession());
-          if(!refreshed?.access_token) throw new Error('Your session expired. Sign in again; your source is retained here.');
-          response=await request(refreshed.access_token);
-        }
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok) throw new Error(`${chunk.name}: ${data.error||'Could not analyze notes'}. Nothing has been imported.`);
-        const normalized=H.normalize(data,{fromParser:true});
-        parsed.clients.push(...normalized.clients);parsed.warnings.push(...normalized.warnings);
-      }
-    }
-    state.modal={type:'smartHistoryReview',parsed,filename,sourceText:raw};render();
-  }catch(error){
-    state.modal={type:'smartImportInput',error:error.message||'Could not analyze history',sourceText:raw,filename};render();
-  }
-}
+async function analyzeSmartHistory(text,filename='pasted notes'){return analyzeImportedData(text,filename);}
 
 function aiExerciseToApp(ex,planned=false){
   const sets=(Array.isArray(ex?.sets)?ex.sets:[]).map(H.validRep);
@@ -629,11 +585,11 @@ async function importSmartHistory(parsed){
   // Prefer active records over archived aliases, and refresh history for safe retries.
   const roster=await restSelectAll('tf_clients','select=*&order=created_at.asc,id.asc');
   for(const row of roster||[]){
-    if(!state.data.clients.some(c=>c.id===row.id)) state.data.clients.push({id:row.id,name:row.name,note:row.note||'',archived:row.archived,createdAt:row.created_at});
+    const existing=state.data.clients.find(c=>c.id===row.id);if(!existing)state.data.clients.push(clientFromRow(row));else if(!deviceStore?.pending['client:'+row.id])Object.assign(existing,clientFromRow(row));
   }
   const remote=await restSelectAll('tf_sessions','select=*&order=created_at.asc,id.asc');
   for(const row of remote||[]){
-    if(!state.data.sessions.some(s=>s.id===row.id)) state.data.sessions.push({id:row.id,clientId:row.client_id,date:row.session_date,createdAt:row.created_at,completedAt:row.completed_at,sessionNote:row.session_note||'',exercises:row.workout||[]});
+    const existing=state.data.sessions.find(s=>s.id===row.id);if(!existing)state.data.sessions.push(sessionFromRow(row));else if(!deviceStore?.pending['session:'+row.id])Object.assign(existing,sessionFromRow(row));
   }
   const existingByName=new Map([...state.data.clients].sort((a,b)=>Number(b.archived)-Number(a.archived)).map(c=>[clientMatchKey(c.name),c]));
   for(const incoming of parsed.clients||[]){
@@ -641,6 +597,8 @@ async function importSmartHistory(parsed){
     try{
       const aliases=[incoming.name,...(incoming.aliases||[])].map(clientMatchKey);
       let existing=aliases.map(key=>existingByName.get(key)).find(Boolean);
+      if(existing&&deviceStore?.pending['client:'+existing.id])throw Error('Sync this client’s pending changes before importing.');
+      if(!existing&&state.data.plan==='free'&&state.data.clients.filter(c=>!c.archived).length>=FREE_CLIENT_LIMIT)throw Error('Free includes 3 active clients. Import into an existing client or archive one first.');
       let client=existing?{...existing}:{id:uid(),name:canonicalClientName(incoming.name),note:'',archived:false,createdAt:new Date().toISOString()};
       const incomingNote=String(incoming.note||'').trim();
       if(incomingNote && !(client.note||'').includes(incomingNote)) client.note=[client.note,incomingNote].filter(Boolean).join('\n\n');
@@ -650,7 +608,7 @@ async function importSmartHistory(parsed){
       for(const past of incoming.sessions||[]){
         if(past.completed!==true) continue;
         const date=past.date||'1900-01-01';
-        const note=(past.date?'':'[DATE UNKNOWN] ')+(past.session_note||'Imported historical workout.');
+        const note=(past.date?'':'[DATE UNKNOWN] ')+(past.assumed_completed?'[IMPORTED · COMPLETION ASSUMED] ':'')+(past.session_note||'Imported historical workout.');
         const exercises=(past.exercises||[]).map(ex=>aiExerciseToApp(ex));
         const duplicate=state.data.sessions.find(s=>s.clientId===client.id && s.completedAt && s.date===date && H.fingerprint(s.exercises)===H.fingerprint(exercises) && s.sessionNote===note);
         if(duplicate){report.skipped++;result.skippedSessions++;continue;}
@@ -736,102 +694,7 @@ function normalizeImportDate(value){
   return d.toISOString().slice(0,10);
 }
 
-async function handleClientCsv(file){
-  if(!file) return;
-  try{
-    await refreshClientRosterForImport();
-    const parsed=parseCsv(await file.text());
-    if(!parsed.length){ toast('CSV has no client rows'); return; }
-    const nameKey=['name','client','client name','client_name'].find(k=>Object.prototype.hasOwnProperty.call(parsed[0],k));
-    if(!nameKey){ toast('CSV needs a name column'); return; }
-
-    const groups=new Map();
-
-    parsed.forEach(r=>{
-      const name=String(r[nameKey]||'').trim();
-      if(!name) return;
-
-      const key=clientMatchKey(name);
-      if(!groups.has(key)) groups.set(key,{
-        name,
-        note:'',
-        archived:false,
-        currentExercises:[],
-        history:new Map()
-      });
-
-      const g=groups.get(key);
-      const note=String(r.note||r.notes||'').trim();
-      if(note && !g.note.includes(note)) g.note += (g.note?'\n':'') + note;
-      g.archived = g.archived || csvBool(r.archived);
-
-      const sessionDate=normalizeImportDate(
-        r.session_date || r['session date'] || r.workout_date || r['workout date'] || r.date
-      );
-      const sessionNote=String(
-        r.session_note || r['session note'] || r.workout_note || r['workout note'] || ''
-      ).trim();
-
-      let historySession=null;
-      if(sessionDate){
-        if(!g.history.has(sessionDate)){
-          g.history.set(sessionDate,{date:sessionDate,sessionNote:'',exercises:[]});
-        }
-        historySession=g.history.get(sessionDate);
-        if(sessionNote && !historySession.sessionNote.includes(sessionNote)){
-          historySession.sessionNote += (historySession.sessionNote?'\n':'') + sessionNote;
-        }
-      }
-
-      const exercise=String(r.exercise||r['exercise name']||r.exercise_name||'').trim();
-      if(exercise){
-        const setCount=Math.max(1,Math.min(10,parseInt(r.sets||'3',10)||3));
-        const reps=String(r.reps||r['target reps']||r.target_reps||'').trim();
-        const exerciseNote=String(r.exercise_note||r['exercise note']||'').trim();
-        const importedSets=sessionDate ? parseImportedSets(r,setCount,reps) : Array(setCount).fill(null);
-
-        const ex={
-          id:uid(),
-          name:exercise,
-          cat:String(r.category||r.cat||'push').trim().toLowerCase(),
-          eq:String(r.equipment||r.eq||'other').trim().toLowerCase(),
-          weight:String(r.weight||'').trim(),
-          sets:importedSets,
-          note:[exerciseNote,(!sessionDate&&reps)?('Target reps: '+reps):''].filter(Boolean).join(' • ')
-        };
-
-        if(historySession) historySession.exercises.push(ex);
-        else g.currentExercises.push(ex);
-      }
-    });
-
-    const rows=[...groups.values()];
-    const existingByName=new Map(state.data.clients.map(c=>[clientMatchKey(c.name),c]));
-    const newActive=rows.filter(r=>!r.archived && !existingByName.has(clientMatchKey(r.name))).length;
-    const activeNow=state.data.clients.filter(c=>!c.archived).length;
-
-    if(state.data.plan==='free' && activeNow+newActive>FREE_CLIENT_LIMIT){
-      state.modal={type:'csvLimit',activeNow,activeComing:newActive};
-      render();
-      return;
-    }
-
-    state.modal={
-      type:'csvImport',
-      rows,
-      total:parsed.length,
-      fileName:file.name,
-      existingCount:rows.filter(r=>existingByName.has(clientMatchKey(r.name))).length,
-      exerciseCount:rows.reduce((n,r)=>n+r.currentExercises.length+[...r.history.values()].reduce((x,s)=>x+s.exercises.length,0),0),
-      historyCount:rows.reduce((n,r)=>n+r.history.size,0),
-      currentWorkoutCount:rows.filter(r=>r.currentExercises.length).length
-    };
-    render();
-  }catch(error){
-    console.error(error);
-    toast('Could not read CSV');
-  }
-}
+async function handleClientCsv(file){if(file)await analyzeImportedData(await file.text(),file.name);}
 
 function lastCompletedSessionForClient(clientId){
   return state.data.sessions
@@ -885,25 +748,29 @@ function renderClients(){
       </div>
     </div>
     <input id="clientSearch" class="search" placeholder="Search clients" />
+    <div class="today-bar"><button class="small-btn" id="todayFilter">Today’s clients</button><span class="muted">Tap ★ to pin a client for today.</span></div>
     <div class="client-list" id="clientList"></div>`;
+  let onlyToday=false;
   const draw=(q='')=>{
-    const filtered=clients.filter(c=>c.name.toLowerCase().includes(q.toLowerCase()));
+    const filtered=clients.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())&&(!onlyToday||c.pinnedOn===todayKey()||activeDraft(c.id)?.date===todayKey())).sort((a,b)=>Number(b.pinnedOn===todayKey())-Number(a.pinnedOn===todayKey()));
     $('#clientList').innerHTML = filtered.length ? filtered.map(c=>{
-      return `<button class="client-card" data-client="${c.id}">
-        <div><div class="client-name">${esc(c.name)}</div><div class="client-sub">${esc(clientHistoryLine(c))}${c.note?' • note saved':''}</div></div>
+      return `<div class="client-item"><button class="client-card" data-client="${c.id}">
+        <div><div class="client-name">${esc(c.name)}</div><div class="client-sub">${activeDraft(c.id)?'↺ Resume unfinished workout · ':''}${esc(clientHistoryLine(c))}${c.note?' • note saved':''}</div></div>
         <div class="client-arrow">›</div>
-      </button>`;
+      </button><button class="pin-client ${c.pinnedOn===todayKey()?'selected':''}" data-pin="${c.id}" aria-label="${c.pinnedOn===todayKey()?'Unpin':'Pin'} ${esc(c.name)} for today" aria-pressed="${c.pinnedOn===todayKey()}">★</button></div>`;
     }).join('') : `<div class="empty"><strong>${q?'No matches':'Add your first client'}</strong><p>${q?'Try a different name.':'This stays intentionally simple: client, workout, notes.'}</p>${q?'':'<button class="primary-btn" id="emptyAdd">+ Add client</button>'}</div>`;
     document.querySelectorAll('[data-client]').forEach(b=>b.onclick=()=>openClient(b.dataset.client));
+    document.querySelectorAll('[data-pin]').forEach(b=>b.onclick=()=>toggleToday(state.data.clients.find(c=>c.id===b.dataset.pin)));
     if($('#emptyAdd')) $('#emptyAdd').onclick=()=>openClientModal();
   };
   draw();
+  $('#todayFilter').onclick=()=>{onlyToday=!onlyToday;$('#todayFilter').textContent=onlyToday?'Show all clients':'Today’s clients';draw($('#clientSearch').value);};
   $('#clientSearch').oninput=e=>draw(e.target.value);
   $('#addClient').onclick=()=>openClientModal();
   $('#importClients').onclick=()=>{state.modal={type:'smartImportInput'};render();};
 }
 
-function openClient(id){ state.selectedClientId=id; ensureTodaySession(id); state.view='workout'; render(); }
+function openClient(id){ state.selectedClientId=id;const draft=activeDraft(id);state.selectedSessionId=(draft||ensureTodaySession(id)).id;state.view='workout';render(); }
 function openClientModal(client=null){
   const active = state.data.clients.filter(c=>!c.archived).length;
   if(!client && state.data.plan==='free' && active>=FREE_CLIENT_LIMIT){ state.modal={type:'upgrade'}; render(); return; }
@@ -928,22 +795,25 @@ function ensureTodaySession(clientId){
 }
 
 function currentClient(){ return state.data.clients.find(c=>c.id===state.selectedClientId); }
-function currentSession(){ return state.data.sessions.find(s=>s.clientId===state.selectedClientId && s.date===todayKey() && !s.completedAt && !s.sessionNote?.startsWith('[PROGRAM TEMPLATE]')) || ensureTodaySession(state.selectedClientId); }
+function currentSession(){return state.data.sessions.find(s=>s.id===state.selectedSessionId&&s.clientId===state.selectedClientId&&!s.completedAt)||state.data.sessions.find(s=>s.clientId===state.selectedClientId&&s.date===todayKey()&&!s.completedAt&&!s.sessionNote?.startsWith('[PROGRAM TEMPLATE]'))||ensureTodaySession(state.selectedClientId);}
 
 function renderWorkout(){
   const client=currentClient(); if(!client){state.view='clients';return render();}
   const session=currentSession();
   const last=lastCompletedSessionForClient(client.id);
   $('#screen').innerHTML=`
+    ${quickClientsHtml()}
     <div class="client-header">
       <button class="back-btn" id="back">‹</button>
-      <div><h1>${esc(client.name)}</h1><div class="sub">Today • ${niceDate()}</div></div>
+      <div><h1>${esc(client.name)}</h1><div class="sub">${session.date===todayKey()?'Today':esc(H.dateLabel(session))} · unfinished workout</div></div>
       <div class="header-actions"><button class="small-btn" id="editClient">Edit</button></div>
     </div>
     <div class="last-workout">
       <div class="note-label">${last?'Last completed workout · '+esc(H.dateLabel(last)):'Your training record'}</div>
       <p>${last?esc((last.exercises||[]).slice(0,3).map(compactExerciseHistory).join(' • ')||last.sessionNote||'Session saved'):'No completed workout recorded yet. Imported programs remain plans until you finish a session.'}</p>
       <button class="small-btn" id="clientHistory">View client history</button>
+      <button class="small-btn" id="clientProgress">Progress</button>
+      <button class="small-btn" id="recoveredNotes">Source notes</button>
     </div>
     <div class="note-card" id="clientNoteCard">
       <div class="note-label help-inline">Client note ${helpTip('Persistent coaching context: goals, injuries, limitations, preferences, and cues you want to remember next time.','About Client Notes')}</div>
@@ -966,6 +836,8 @@ function renderWorkout(){
   $('#stopRestTimer').onclick=()=>{saveRestTimer(session,null);refreshRestTimer(session);};
   refreshRestTimer(session);
   $('#clientHistory').onclick=()=>{state.historyClientId=client.id;state.historyQuery='';state.view='history';render();};
+  $('#clientProgress').onclick=()=>{state.modal={type:'progress',clientId:client.id};render();};
+  $('#recoveredNotes').onclick=()=>{state.modal={type:'recovered',clientId:client.id};render();};
   $('#back').onclick=()=>{state.view='clients';render();};
   $('#editClient').onclick=()=>openClientModal(client);
   $('#clientNoteCard').onclick=()=>{state.modal={type:'clientNote'};render();};
@@ -1021,7 +893,7 @@ function exerciseHtml(ex,i){
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
       <span class="help-inline"><button class="small-btn" data-progress="${i}">Add weight at ${progressAt} reps</button>${helpTip('This threshold is unique to this exercise. When every logged set reaches it, Trainer Floor flags “Add weight next time.”','About Progression Target')}</span>
-      ${ready?'<span style="font-size:12px;font-weight:900;color:#a9b8ff">↑ Add weight next time</span>':''}
+      <span id="progressReady${i}" class="progress-ready" ${ready?'':'hidden'}>↑ Add weight next time</span>
     </div>
     <div class="exercise-footer"><div class="mini-note">${ex.note?esc(ex.note):'No exercise note'}</div><button class="remove-ex" data-remove="${i}" title="Remove">×</button></div>
   </div>`;
@@ -1031,9 +903,9 @@ function wireExerciseCards(session){
   document.querySelectorAll('[data-set]').forEach(btn=>btn.onclick=()=>{
     const [i,j]=btn.dataset.set.split(':').map(Number);
     const v=logSet(session,i,j);
-    btn.textContent=v===null?'':v; btn.classList.toggle('logged',v!==null);
+    btn.textContent=v===null?'':v; btn.classList.toggle('logged',v!==null);const ready=$('#progressReady'+i);if(ready)ready.hidden=!exerciseReadyToProgress(session.exercises[i]);
   });
-  document.querySelectorAll('[data-weight]').forEach(inp=>inp.onchange=()=>{session.exercises[+inp.dataset.weight].weight=inp.value;saveSession(session);toast('Weight saved');});
+  document.querySelectorAll('[data-weight]').forEach(inp=>inp.oninput=()=>{session.exercises[+inp.dataset.weight].weight=inp.value;saveSession(session);});
   document.querySelectorAll('[data-progress]').forEach(b=>b.onclick=()=>{state.modal={type:'progressionTarget',index:+b.dataset.progress};render();});
   document.querySelectorAll('[data-change]').forEach(b=>b.onclick=()=>openPicker(+b.dataset.change));
   document.querySelectorAll('[data-addset]').forEach(b=>b.onclick=()=>{session.exercises[+b.dataset.addset].sets.push(null);saveSession(session);render();});
@@ -1049,21 +921,18 @@ function openPicker(replaceIndex){
 async function finishSession(){
   const session=currentSession();
   if(!session.exercises.length){toast('Add at least one exercise');return;}
-  const button=$('#finishSession');
-  if(button){ button.disabled=true; button.textContent='Saving…'; }
+  if(!H.hasLoggedSets(session)){toast('Log at least one set before finishing');return;}
   session.completedAt=new Date().toISOString();
-  try{
-    await syncSession(session);
+  const stored=saveSession(session);
+  if(!stored){
+    await deviceStore?.flush();
+    if(deviceStore?.pending['session:'+session.id]){session.completedAt=null;saveSession(session);toast('Keep this screen open: save needs a connection');return;}
+  }
     saveRestTimer(session,null);
-    toast('Session saved');
+    toast('Session finished · changes saved');
+    state.selectedSessionId=null;
     state.view='history';
     render();
-  }catch(error){
-    console.error(error);
-    session.completedAt=null;
-    if(button){ button.disabled=false; button.textContent='Finish session'; }
-    toast('Could not finish — check connection');
-  }
 }
 
 function previousExerciseHtml(ex){
@@ -1105,23 +974,12 @@ function renderSettings(){
   $('#screen').innerHTML=`
     <div class="page-title"><div><h1 class="help-inline">Settings ${helpTip('Account, plan, pricing, and backup controls.','About Settings')}</h1><p>${esc(p.email)}</p></div></div>
     <div class="settings-card"><div class="settings-row"><div><h3>${esc(p.name)}</h3><p>${state.data.profile.trainerNumber===1?'Founder access • unlimited clients':state.data.plan==='pro'?'Pro • unlimited clients':`Free • up to ${FREE_CLIENT_LIMIT} clients`}</p></div><span class="badge ${state.data.plan}">Trainer #${state.data.profile.trainerNumber || '—'} • ${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span></div></div>
-    <div class="settings-card">
-      <div><h3 class="help-inline">Founder pricing ${helpTip('Everyone gets the same Trainer Floor product. The only difference is how early they joined. Founder rates stay locked while the subscription remains active.','About Founder Pricing')}</h3>
-      <p>Free through 3 active clients. Founder pricing is grouped into simple cohorts instead of changing by $1 for every person.</p></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px">
-        <div class="stat"><b>$25</b><span>First 25</span></div>
-        <div class="stat"><b>$50</b><span>26–50</span></div>
-        <div class="stat"><b>$75</b><span>51–100</span></div>
-        <div class="stat"><b>$99</b><span>Standard</span></div>
-      </div>
-      <p class="tiny" style="margin-bottom:0!important">Founding 25 is limited to the first 25 paid trainers. After each cohort fills, new trainers join at the next published rate. $99/month is the permanent standard-price cap.</p>
-      ${state.data.plan==='free'?'<button class="primary-btn full" id="upgrade">See Founder Pricing</button>':''}
-    </div>
-    <div class="settings-card"><h3>Data backup</h3><p>Download a JSON copy of your trainer data anytime.</p><button class="ghost-btn full" id="export">Export backup</button></div>
+    ${founderOfferHtml()}
+    <div class="settings-card"><h3>Asana sync</h3><p>${state.data.integration?'Connected · checks hourly. Completed sessions include a summary and every recorded exercise, weight, set, and rep.':'Not connected for this account.'}</p><p class="tiny">${state.data.integration?.last_checked_at?'Last checked: '+esc(new Date(state.data.integration.last_checked_at).toLocaleString()):''}</p></div><div class="settings-card"><h3>Data backup</h3><p>Download a JSON copy of your trainer data anytime.</p><button class="ghost-btn full" id="export">Export backup</button></div>
     <div class="settings-card"><h3>Account</h3><p>${active} active clients synced to your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>
     <p class="build-label">Trainer Floor ${APP_VERSION}</p>`;
-  if($('#upgrade')) $('#upgrade').onclick=()=>{state.modal={type:'upgrade'};render();};
-  $('#logout').onclick=async()=>{await SB.auth.signOut();state.user=null;state.data=null;state.modal=null;renderLogin();};
+  wireFounderOffer();
+  $('#logout').onclick=async()=>{if(deviceStore?.status().pending){state.modal={type:'saveStatus'};render();toast('Sync pending changes before signing out');return;}deviceStore?.close();clearTimeout(saveRetry);deviceStore=null;await SB.auth.signOut();state.user=null;state.data=null;state.modal=null;renderLogin();};
   $('#export').onclick=()=>{
     const blob=new Blob([JSON.stringify(state.data,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='trainer-floor-backup.json';a.click();URL.revokeObjectURL(a.href);
   };
@@ -1129,42 +987,21 @@ function renderSettings(){
 
 function modalHtml(){
   const m=state.modal;
+  if(m.type==='saveStatus')return saveStatusHtml();
+  if(m.type==='conflict')return conflictHtml();
+  if(m.type==='progress')return progressHtml(m.clientId);
+  if(m.type==='recovered')return recoveredHtml(m.clientId);
+  if(m.type==='editHistory')return historyEditHtml();
+  if(m.type==='revisions')return revisionsHtml();
   if(m.type==='client'){
     const c=m.clientId?state.data.clients.find(x=>x.id===m.clientId):null;
     return modalWrap(`${c?'Edit':'Add'} client`, `<form id="clientForm"><div class="field"><label>Name</label><input id="clientName" value="${esc(c?.name||'')}" required autofocus /></div><div class="field"><label>Client note</label><textarea id="clientNote" placeholder="Injuries, goals, coaching cues…">${esc(c?.note||'')}</textarea></div><button class="primary-btn full" type="submit">${c?'Save client':'Add client'}</button>${c?'<button class="danger-btn full" id="archiveClient" type="button">Archive client</button>':''}</form>`);
   }
-  if(m.type==='smartImportInput'){
-    return modalWrap('Smart History Import',`
-      ${m.error?`<div class="note-card"><div class="note-text">${esc(m.error)}</div></div>`:''}
-      <div class="import-hero">
-        <strong>Bring your data from anywhere — even AI.</strong>
-        <p>Paste a ChatGPT, Claude, or Gemini summary; upload a spreadsheet export; or drop in old workout notes. You do not need to clean it up first. Trainer Floor will identify the clients, dates, exercises, weights, sets, reps, and coaching notes, then organize them into usable workout history for you to review.</p>
-      </div>
-      <div class="field"><label class="help-inline">Upload bulk data ${helpTip('Accepted: CSV, TXT, TSV, JSON, and Markdown. The file does not need to match a Trainer Floor template.','About File Uploads')}</label><input id="smartImportFile" type="file" accept=".csv,.txt,.tsv,.md,.json,text/plain,text/csv,application/json" /></div>
-      <div class="field"><label class="help-inline">Or paste anything ${helpTip('This can be copied from an AI conversation, old trainer notes, a CRM export, workout logs, or mixed client records.','About Pasted Data')}</label><textarea id="smartImportText" rows="10" placeholder="Paste AI-generated client summaries, workout logs, old notes, exports, or any bulk client data here…">${esc(m.sourceText||'')}</textarea></div>
-      <button class="primary-btn full" id="analyzeSmartImport">Make sense of my data</button>
-      <p class="tiny">AI reconstructs the records on the private server. Nothing is saved until you review the organized clients and workout history and choose Import.</p>`);
-  }
+  if(m.type==='smartImportInput')return importInputHtml(m);
   if(m.type==='smartHistoryLoading'){
     return modalWrap('Analyzing history',`<div class="empty"><strong>Reconstructing client records…</strong><p>${esc(m.progress||m.filename||'Import')}</p></div>`);
   }
-  if(m.type==='smartHistoryReview'){
-    const p=m.parsed||{}; const clients=p.clients||[];
-    const sessionCount=clients.reduce((n,c)=>n+(c.sessions?.length||0),0);
-    const exerciseCount=clients.reduce((n,c)=>n+(c.sessions||[]).reduce((x,s)=>x+(s.exercises?.length||0),0)+(c.current_workout?.length||0),0);
-    const undated=clients.reduce((n,c)=>n+(c.sessions||[]).filter(s=>!s.date).length,0);
-    return modalWrap('Review reconstructed history',`
-      <div class="stats">
-        <div class="stat"><b>${clients.length}</b><span>Clients</span></div>
-        <div class="stat"><b>${sessionCount}</b><span>Past sessions</span></div>
-        <div class="stat"><b>${exerciseCount}</b><span>Exercises</span></div>
-      </div>
-      ${undated?`<div class="note-card"><div class="note-text">${undated} past session${undated===1?' has':'s have'} no exact date. Trainer Floor will preserve them as date-unknown history instead of inventing dates.</div></div>`:''}
-      ${(p.warnings||[]).length?`<div class="settings-card"><h3>Review notes</h3><p>${(p.warnings||[]).map(w=>esc(w)).join('<br>')}</p></div>`:''}
-      <div class="client-list">${clients.map(c=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(c.name)}</div><div class="client-sub">${c.sessions?.length||0} past session${(c.sessions?.length||0)===1?'':'s'}${c.current_workout?.length?' • current workout':''}${c.note?' • coaching notes':''}</div><details><summary>Review details</summary><p class="note-text">${esc(c.note||'No client note')}</p>${(c.sessions||[]).map(s=>`<div class="import-session"><b>${esc(s.date||'Date unknown')}</b><p>${esc(s.session_note||'')}</p>${(s.exercises||[]).map(e=>`<p>${esc(e.name)} — ${esc(historyExerciseSummary(e))}${e.note?' • '+esc(e.note):''}</p>`).join('')}</div>`).join('')}${c.current_workout?.length?'<p>Program only: '+c.current_workout.map(e=>esc(e.name)).join(', ')+'</p>':''}</details></div></div>`).join('')}</div>
-      <button class="primary-btn full" id="confirmSmartHistory">Import reconstructed history</button>
-      <button class="ghost-btn full" id="backSmartHistory">Back</button>`);
-  }
+  if(m.type==='smartHistoryReview')return importReviewHtml(m);
   if(m.type==='smartImportResult'){
     const r=m.result;
     return modalWrap(r.failures.length?'Import needs attention':'Import complete',`<div class="settings-card"><h3>${r.importedSessions} workouts added · ${r.skippedSessions} already saved</h3><p>${r.clients.length} clients processed. ${r.importedClients} new client records.</p></div><div class="client-list">${r.clients.map(c=>`<div class="client-card"><div><b>${esc(c.name)}</b><div class="client-sub">${c.added} added · ${c.skipped} already saved${c.template?' · program saved separately':''}</div></div></div>`).join('')}${r.failures.map(c=>`<div class="note-card"><b>${esc(c.name)}</b><p>${esc(c.error)}</p><p>${c.added} workouts saved before this error. Retrying skips those records.</p></div>`).join('')}</div>${r.failures.length?'<button class="primary-btn full" id="retrySmartImport">Retry failed clients</button>':''}<button class="ghost-btn full" id="viewImportedHistory">View workout history</button>`);
@@ -1185,22 +1022,6 @@ function modalHtml(){
   if(m.type==='csvLimit'){
     const slots=Math.max(0,FREE_CLIENT_LIMIT-m.activeNow);
     return modalWrap('Free plan limit',`<div class="settings-card"><h3>CSV import would exceed 3 active clients</h3><p>You have ${m.activeNow} active client${m.activeNow===1?'':'s'} and this file adds ${m.activeComing}. Your free plan has ${slots} active slot${slots===1?'':'s'} left.</p></div><button class="primary-btn full" id="csvSeeFounderRate">See Founder Rate</button>`);
-  }
-  if(m.type==='progressionTarget') {
-    document.querySelectorAll('[data-progress-choice]').forEach(b=>b.onclick=()=>{
-      $('#progressionTarget').value=b.dataset.progressChoice;
-      document.querySelectorAll('[data-progress-choice]').forEach(x=>x.classList.toggle('active',x===b));
-    });
-    $('#progressionForm').onsubmit=e=>{
-      e.preventDefault();
-      const n=Math.max(1,parseInt($('#progressionTarget').value,10)||TARGET_REPS);
-      const s=currentSession();
-      s.exercises[m.index].progressAt=n;
-      saveSession(s);
-      state.modal=null;
-      render();
-      toast('Progression target saved');
-    };
   }
   if(m.type==='clientNote'){
     const c=currentClient(); return modalWrap('Client note',`<form id="clientNoteForm"><div class="field"><textarea id="clientNoteText" placeholder="Important things to remember…" autofocus>${esc(c.note||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
@@ -1225,27 +1046,10 @@ function modalHtml(){
     const ex=currentSession().exercises[m.index]; return modalWrap('Exercise note',`<form id="exerciseNoteForm"><p class="muted">${esc(ex.name)}</p><div class="field"><textarea id="exerciseNoteText" placeholder="Cue, pain, setup, progression…">${esc(ex.note||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
   }
   if(m.type==='picker') return pickerHtml();
-  if(m.type==='upgrade') return modalWrap('Founder Pricing',`<div class="settings-card founder-sale">
-  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:#8ea7ff;margin-bottom:8px">Founding 25</div>
-  <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
-    <div style="font-size:24px;color:#777;text-decoration:line-through;text-decoration-thickness:2px">$99/month</div>
-    <div class="plan-price" style="font-size:44px;color:#fff">$25<span style="font-size:15px;letter-spacing:0;color:#aaa">/month</span></div>
-  </div>
-  <div style="font-weight:950;font-size:18px;margin-top:5px">First 25 paid trainers</div>
-  <p style="margin-top:8px">Everyone gets the same Trainer Floor product. Early trainers simply lock a lower monthly rate while their subscription remains active.</p>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px">
-    <div class="stat" style="text-align:center"><b>$25</b><span>1–25</span></div>
-    <div class="stat" style="text-align:center"><b>$50</b><span>26–50</span></div>
-    <div class="stat" style="text-align:center"><b>$75</b><span>51–100</span></div>
-    <div class="stat" style="text-align:center"><b>$99</b><span>101+</span></div>
-  </div>
-  <p class="tiny" style="margin-bottom:0!important">When a cohort fills, new trainers move to the next published rate. There are no feature differences between cohorts. $99/month is the permanent standard-price cap.</p>
-</div>
-<button class="primary-btn full" id="prototypeUpgrade">Founding 25 — $25/month</button>
-<p class="tiny">Billing is not active yet. No payment is taken from this prototype.</p>`);
+  if(m.type==='upgrade')return modalWrap('Founding trainer offer',founderOfferHtml());
   if(m.type==='history'){
     const session=state.data.sessions.find(x=>x.id===m.sessionId);const client=state.data.clients.find(x=>x.id===session?.clientId);
-    return modalWrap(esc(client?.name||'Session'),`<p class="muted">${session?esc(H.dateLabel(session)):''}</p>${session?.sessionNote?`<div class="note-card"><div class="note-label">Session note</div><div class="note-text">${esc(session.sessionNote)}</div></div>`:''}<div class="client-list">${(session?.exercises||[]).map(ex=>`<div class="client-card"><div><div class="client-name">${esc(ex.name)}</div><div class="client-sub">${esc(historyExerciseSummary(ex))}</div>${ex.note?`<p class="note-text">${esc(ex.note)}</p>`:''}</div></div>`).join('')}</div>`);
+    return modalWrap(esc(client?.name||'Session'),`<div class="history-actions"><button class="small-btn" id="editHistory">Edit workout</button><button class="small-btn" id="reopenSession">Reopen session</button><button class="small-btn" id="historyRevisions">Previous versions</button></div>${session?asanaStatusHtml(session):''}<p class="muted">${session?esc(H.dateLabel(session)):''}</p>${session?.sessionNote?`<div class="note-card"><div class="note-label">Session note</div><div class="note-text">${esc(session.sessionNote)}</div></div>`:''}<div class="client-list">${(session?.exercises||[]).map(ex=>`<div class="client-card"><div><div class="client-name">${esc(ex.name)}</div><div class="client-sub">${esc(historyExerciseSummary(ex))}</div>${ex.note?`<p class="note-text">${esc(ex.note)}</p>`:''}</div></div>`).join('')}</div>`);
   }
 
 
@@ -1272,6 +1076,24 @@ function wireModal(){
   if($('#closeModal')) $('#closeModal').onclick=()=>{state.modal=null;render();};
   if($('#backdrop')) $('#backdrop').onclick=e=>{if(e.target.id==='backdrop'){state.modal=null;render();}};
   const m=state.modal;
+  wireFeatureModal();
+  if(m.type==='progressionTarget') {
+    document.querySelectorAll('[data-progress-choice]').forEach(b=>b.onclick=()=>{
+      $('#progressionTarget').value=b.dataset.progressChoice;
+      document.querySelectorAll('[data-progress-choice]').forEach(x=>x.classList.toggle('active',x===b));
+    });
+    $('#progressionForm').onsubmit=e=>{
+      e.preventDefault();
+      const n=Math.max(1,parseInt($('#progressionTarget').value,10)||TARGET_REPS);
+      const s=currentSession();
+      s.exercises[m.index].progressAt=n;
+      saveSession(s);
+      state.modal=null;
+      render();
+      toast('Progression target saved');
+    };
+  }
+
   if(m.type==='client'){
     $('#clientForm').onsubmit=e=>{e.preventDefault(); const name=$('#clientName').value.trim(), note=$('#clientNote').value.trim();
       let client;
@@ -1279,39 +1101,7 @@ function wireModal(){
       saveClient(client);state.modal=null;render();toast(m.clientId?'Client saved':'Client added');};
     if($('#archiveClient')) $('#archiveClient').onclick=()=>{const c=state.data.clients.find(x=>x.id===m.clientId);c.archived=true;saveClient(c);state.modal=null;state.view='clients';render();toast('Client archived');};
   }
-  if(m.type==='smartImportInput') {
-    const fileInput=$('#smartImportFile');
-    const textArea=$('#smartImportText');
-    if(textArea && m.filename) textArea.dataset.filename=m.filename;
-    if(fileInput) fileInput.onchange=async e=>{
-      const file=e.target.files?.[0];
-      if(!file) return;
-      try{
-        textArea.value=await file.text();
-        textArea.dataset.filename=file.name;
-      }catch(error){
-        console.error(error); toast('Could not read that file');
-      }
-    };
-    if($('#analyzeSmartImport')) $('#analyzeSmartImport').onclick=()=>{
-      analyzeSmartHistory(textArea?.value||'',textArea?.dataset?.filename||'pasted notes');
-    };
-  }
-  if(m.type==='smartHistoryReview') {
-    if($('#backSmartHistory')) $('#backSmartHistory').onclick=()=>{state.modal={type:'smartImportInput',sourceText:m.sourceText,filename:m.filename};render();};
-    if($('#confirmSmartHistory')) $('#confirmSmartHistory').onclick=async()=>{
-      const btn=$('#confirmSmartHistory');
-      btn.disabled=true; btn.textContent='Importing history…';
-      try{
-        const result=await importSmartHistory(m.parsed||{});
-        state.modal={type:'smartImportResult',result,parsed:m.parsed};render();
-      }catch(error){
-        console.error(error);
-        btn.disabled=false; btn.textContent='Import reconstructed history';
-        toast(error.message||'Import failed');
-      }
-    };
-  }
+  wireImportModal(m);
   if(m.type==='smartImportResult'){
     $('#viewImportedHistory').onclick=()=>{state.modal=null;state.historyClientId='';state.historyQuery='';state.view='history';render();};
     if($('#retrySmartImport')) $('#retrySmartImport').onclick=()=>{
@@ -1401,7 +1191,7 @@ function wireModal(){
   if(m.type==='sessionNote') $('#sessionNoteForm').onsubmit=e=>{e.preventDefault();const s=currentSession();s.sessionNote=$('#sessionNoteText').value.trim();saveSession(s);state.modal=null;render();toast('Session note saved');};
   if(m.type==='exerciseNote') $('#exerciseNoteForm').onsubmit=e=>{e.preventDefault();const s=currentSession();s.exercises[m.index].note=$('#exerciseNoteText').value.trim();saveSession(s);state.modal=null;render();toast('Exercise note saved');};
   if(m.type==='picker') wirePicker();
-  if(m.type==='upgrade') $('#prototypeUpgrade').onclick=()=>{state.modal=null;render();toast('Billing connection is not active yet');};
+  if(m.type==='upgrade')wireFounderOffer();
 }
 function wirePicker(){
   document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{state.picker.category=b.dataset.cat;render();});

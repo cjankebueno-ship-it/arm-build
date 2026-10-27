@@ -8,6 +8,9 @@ const html=fs.readFileSync(require.resolve('../trainer-floor/index.html'),'utf8'
 const source=html.match(/<script>([\s\S]*?)<\/script>/)[1].replace(/\nstart\(\);/,'');
 function app(){
   const context=vm.createContext({TrainerHistory:H,crypto,console,Date,setTimeout,clearTimeout,localStorage:{getItem:()=>null,setItem:()=>{}},document:{querySelector:()=>null,querySelectorAll:()=>[]}});
+  vm.runInContext(fs.readFileSync(require.resolve('../trainer-floor/features.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(require.resolve('../trainer-floor/import-ui.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(require.resolve('../trainer-floor/founder.js'),'utf8'),context);
   vm.runInContext(source,context);
   vm.runInContext(`state.user={id:'owner'};state.data={clients:[],sessions:[],plan:'pro'};restSelect=async()=>[];syncClient=async()=>{};syncSession=async()=>{};saveSession=()=>{};render=()=>{};`,context);
   return {run:code=>vm.runInContext(code,context),context};
@@ -20,6 +23,21 @@ test('structured import preserves every client and only confirmed sessions',()=>
   assert.equal(result.clients.length,2);assert.equal(result.clients[0].sessions.length,1);
   assert.deepEqual(result.clients[0].current_workout[0].sets,[null,null]);
   assert.match(result.clients[0].current_workout[0].note,/Target reps/);
+});
+test('completed-import mode converts ambiguous workouts and current routines into completed history',()=>{
+  const input=fixture();input.clients[0].sessions[0].completed=false;
+  const result=H.normalize(input,{assumeCompleted:true});
+  assert.equal(result.clients[0].sessions.length,2);assert.equal(result.clients[0].sessions[0].completed,true);assert.equal(result.clients[0].sessions[0].assumed_completed,true);assert.equal(result.clients[0].current_workout.length,0);
+  assert.deepEqual(result.clients[0].sessions[1].exercises[0].sets,[15,15]);assert.equal(result.clients[0].sessions[1].date,null);
+});
+test('program mode retains target reps without creating completed sessions',()=>{
+  const result=H.normalize(fixture(),{mode:'program',assumeCompleted:true});assert.equal(result.clients[0].sessions.length,0);assert.ok(result.clients[0].current_workout.length);assert.equal(result.clients[0].current_workout[0].sets[0],null);
+});
+test('Trainerize roster CSV imports names and contact details but cannot invent workouts',()=>{
+  const a=app();a.context.csv='First Name,Last Name,Email,Phone\nTaylor,Example,taylor@example.test,555-0100';const result=a.run('rosterCsv(csv)');assert.equal(result.clients[0].name,'Taylor Example');assert.equal(result.clients[0].sessions.length,0);
+});
+test('assumed history creates completed database-bound sessions and repeat import is idempotent',async()=>{
+  const a=app();a.context.input=H.normalize(fixture(),{assumeCompleted:true});const first=await a.run('importSmartHistory(input)');const second=await a.run('importSmartHistory(input)');assert.equal(first.importedSessions,2);assert.equal(second.importedSessions,0);assert.equal(second.skippedSessions,2);assert.equal(a.run('state.data.sessions.filter(s=>!!s.completedAt).length'),2);
 });
 test('invalid dates fail instead of silently creating invented dates',()=>{
   for(const date of ['2026-02-30','not a date','2099-01-01']){const input=fixture();input.clients[0].sessions[0].date=date;assert.throws(()=>H.normalize(input));}

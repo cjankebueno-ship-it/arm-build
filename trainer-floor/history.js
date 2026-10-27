@@ -23,7 +23,7 @@
     const n=Number(value);
     return Number.isInteger(n) && n>=0 && n<=10000 ? n : null;
   }
-  function normalize(value,{fromParser=false}={}){
+  function normalize(value,{fromParser=false,mode='history',assumeCompleted=false}={}){
     if(!value || !Array.isArray(value.clients) || !value.clients.length) throw new Error('This file needs a non-empty clients list.');
     const warnings=Array.isArray(value.warnings)?value.warnings.filter(x=>typeof x==='string'):[];
     const exercise=(ex,planned=false)=>{
@@ -42,16 +42,27 @@
     const clients=value.clients.map(c=>{
       if(!c || !text(c.name)) throw new Error('A client is missing a name. Nothing has been imported.');
       const sessions=[];
-      for(const s of Array.isArray(c.sessions)?c.sessions:[]){
-        if(s.completed!==true && !(fromParser && s.completed===undefined)){
+      const candidates=[...(Array.isArray(c.sessions)?c.sessions:[])];
+      const current=Array.isArray(c.current_workout)?c.current_workout:[];
+      if(mode==='history'&&assumeCompleted&&current.length&&!candidates.some(s=>fingerprint(s.exercises)===fingerprint(current)))candidates.push({date:null,completed:false,assumed_completed:true,session_note:'Imported workout; completion assumed by trainer.',exercises:current});
+      const planned=[];
+      for(const s of candidates){
+        if(mode==='program'){planned.push(...(Array.isArray(s.exercises)?s.exercises:[]));continue;}
+        if(!assumeCompleted && s.completed!==true && !(fromParser && s.completed===undefined)){
           warnings.push(c.name+': excluded a session without confirmed completion.');continue;
         }
-        const date=s.date?dateKey(s.date):null;
+        let date=s.date?dateKey(s.date):null;
         if(s.date && !date) throw new Error(c.name+': invalid session date '+String(s.date)+'. Correct it before importing.');
-        if(date && date>localDay()) throw new Error(c.name+': a completed session is dated in the future ('+date+').');
-        sessions.push({date,completed:true,session_note:text(s.session_note),exercises:(Array.isArray(s.exercises)?s.exercises:[]).map(ex=>exercise(ex))});
+        let note=text(s.session_note);
+        const assumed=s.assumed_completed===true||s.completed!==true;
+        if(date && date>localDay()){
+          if(!assumeCompleted||!assumed)throw new Error(c.name+': a completed session is dated in the future ('+date+').');
+          note=['Source date: '+date+' (future; review actual workout date).',note].filter(Boolean).join(' ');date=null;
+          warnings.push(c.name+': a future source date needs review; no completion date was invented.');
+        }
+        sessions.push({date,completed:true,assumed_completed:assumed,session_note:note,exercises:(Array.isArray(s.exercises)?s.exercises:[]).map(ex=>exercise(ex))});
       }
-      return {name:text(c.name),aliases:(Array.isArray(c.aliases)?c.aliases:[]).map(text).filter(Boolean),note:text(c.note),sessions,current_workout:(Array.isArray(c.current_workout)?c.current_workout:[]).map(ex=>exercise(ex,true))};
+      return {name:text(c.name),aliases:(Array.isArray(c.aliases)?c.aliases:[]).map(text).filter(Boolean),note:text(c.note),sessions,current_workout:(mode==='program'?[...planned,...current]:assumeCompleted?[]:current).map(ex=>exercise(ex,true))};
     });
     return {clients,warnings:[...new Set(warnings)]};
   }
