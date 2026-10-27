@@ -91,7 +91,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.4.3';
+const APP_VERSION = '0.4.5';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -246,9 +246,10 @@ function renderLogin(message=''){
           <div class="field"><label>Email</label><input id="email" type="email" autocomplete="email" placeholder="you@example.com" required /></div>
           <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" minlength="8" placeholder="8+ characters" required /></div>
           <button class="primary-btn full" id="signIn" type="submit">Sign in</button>
+          <button class="ghost-btn full" id="forgotPassword" type="button">Forgot password?</button>
           <button class="ghost-btn full" id="createAccount" type="button">Create trainer account</button>
         </form>
-        <p class="tiny">Free for up to 3 active clients. $99/month after that. Trainer #1 receives founder access.</p>
+        <p class="tiny">Free for up to 3 active clients. Founder Rate starts at $9/month and rises $1 for each new paid founder. Trainer #1 receives founder access.</p>
       </div>
     </div>`;
   $('#loginForm').addEventListener('submit', async e=>{
@@ -256,9 +257,26 @@ function renderLogin(message=''){
     const email=$('#email').value.trim().toLowerCase(), password=$('#password').value;
     const btn=$('#signIn'); btn.disabled=true; btn.textContent='Signing in…';
     const {data,error}=await SB.auth.signInWithPassword({email,password});
-    if(error){btn.disabled=false;btn.textContent='Sign in';return renderLogin(error.message);}
+    if(error){
+      btn.disabled=false; btn.textContent='Sign in';
+      const msg = error.message === 'Invalid login credentials'
+        ? 'That email already exists, but the password does not match. Try again or tap Forgot password.'
+        : error.message;
+      return renderLogin(msg);
+    }
     await loadRemote(data.user); render();
   });
+  $('#forgotPassword').onclick=async()=>{
+    const email=$('#email').value.trim().toLowerCase();
+    if(!email){ return renderLogin('Enter your email first, then tap Forgot password.'); }
+    try{
+      await api('/auth/v1/recover',{method:'POST',body:{email}});
+      renderLogin('Password reset requested. Check your email for the reset link, then return here and sign in.');
+    }catch(error){
+      renderLogin(error.message || 'Could not request a password reset.');
+    }
+  };
+
   $('#createAccount').onclick=async()=>{
     const name=$('#name').value.trim(), email=$('#email').value.trim().toLowerCase(), password=$('#password').value;
     if(!name || !email || password.length<8){return toast('Name, email and 8+ character password required');}
@@ -266,7 +284,7 @@ function renderLogin(message=''){
     const {data,error}=await SB.auth.signUp({email,password,options:{data:{display_name:name}}});
     if(error){btn.disabled=false;btn.textContent='Create trainer account';return renderLogin(error.message);}
     if(data.session && data.user){ await loadRemote(data.user); render(); }
-    else renderLogin('Account created. Check your email to confirm it, then return here and sign in.');
+    else renderLogin('If this is a new email, check your inbox to confirm it. If you already used this email with ChrisJanke.com, use Sign in or Forgot password instead.');
   };
 }
 
