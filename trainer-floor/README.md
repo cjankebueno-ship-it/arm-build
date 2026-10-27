@@ -12,7 +12,7 @@ The authenticated import API is maintained in the private `chrisjanke.com` repos
 
 The founding offer is $19/month or $190/year, with a free three-active-client plan. The first 25 authenticated reservations protect the advertised rate under the displayed continuity terms. Reservations are real database records and cost $0. Marketing and account UI do not display signup totals, remaining reservation counts, or sequential trainer/reservation numbers. Only the actual offer limit and open/closed availability may be shown. Billing is not implemented: there is no payment collection, automatic subscription, or unlimited-client unlock from reserving. Do not advertise paid checkout until subscription creation, webhooks, cancellation and entitlements are implemented and tested.
 
-Asana status UI displays a configured account integration and sync receipts. It does not itself run an Asana sync worker.
+Asana is not available yet: OAuth authorization and a sync worker still need implementation. Settings includes a Connect Asana button that explains this limitation, plus an accessible question-mark disclosure about keeping an extra workout log in Asana. It does not request credentials, change the integration record, or claim a successful connection. Do not replace the setup message with a connected state until authorization and actual syncing work.
 
 Run `TZ=America/Los_Angeles node --test tests/*.test.cjs` from the repository root. The sample preview is isolated in a sandbox and uses synthetic data; it never saves to a real account. Backend import tests are in the private repository. Bump app asset query versions and the service-worker cache together when publishing a new app release.
 
