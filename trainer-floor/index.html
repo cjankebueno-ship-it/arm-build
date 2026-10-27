@@ -104,7 +104,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.9.2';
+const APP_VERSION = '0.10.0';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -266,8 +266,9 @@ function renderLogin(message=''){
           <button class="primary-btn full" id="signIn" type="submit">Sign in</button>
           <button class="ghost-btn full" id="forgotPassword" type="button">Forgot password?</button>
           <button class="ghost-btn full" id="createAccount" type="button">Create trainer account</button>
+          <button class="ghost-btn full" id="seePricing" type="button">See Founder Pricing</button>
         </form>
-        <p class="tiny">Free for up to 3 active clients. Founder Rate starts at $9/month and rises $1 for each new paid founder. Trainer #1 receives founder access.</p>
+        <p class="tiny">Free for up to 3 active clients. Founding 25 trainers can lock $25/month; later founder cohorts are $50 and $75 before the standard $99/month rate. Trainer #1 receives founder access.</p>
       </div>
     </div>`;
   $('#loginForm').addEventListener('submit', async e=>{
@@ -296,6 +297,7 @@ function renderLogin(message=''){
     }
   };
 
+  if($('#seePricing')) $('#seePricing').onclick=()=>{window.location.href='./sales.html';};
   $('#createAccount').onclick=async()=>{
     const name=$('#name').value.trim(), email=$('#email').value.trim().toLowerCase(), password=$('#password').value;
     if(!name || !email || password.length<8){return toast('Name, email and 8+ character password required');}
@@ -929,7 +931,18 @@ function renderSettings(){
   $('#screen').innerHTML=`
     <div class="page-title"><div><h1 class="help-inline">Settings ${helpTip('Account, plan, pricing, and backup controls.','About Settings')}</h1><p>${esc(p.email)}</p></div></div>
     <div class="settings-card"><div class="settings-row"><div><h3>${esc(p.name)}</h3><p>${state.data.profile.trainerNumber===1?'Founder access • unlimited clients':state.data.plan==='pro'?'Pro • unlimited clients':`Free • up to ${FREE_CLIENT_LIMIT} clients`}</p></div><span class="badge ${state.data.plan}">Trainer #${state.data.profile.trainerNumber || '—'} • ${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span></div></div>
-    <div class="settings-card"><div class="settings-row"><div><h3 class="help-inline">Founder pricing ${helpTip('Founders lock the monthly rate they joined at while their subscription remains active. Each new paid founder raises the price by $1/month for future founders until the Founder Rate reaches its $99/month cap.','About Founder Pricing')}</h3><p>Free through 3 active clients. Founders lock their joining rate for life. Each new paid founder raises the rate $1/month for future founders until it reaches the $99/month cap.</p></div><div style="text-align:right"><div style="font-size:14px;color:#777;text-decoration:line-through">$99/mo</div><div class="plan-price">$9</div><div class="muted" style="font-size:12px">Founder rate / month</div></div></div>${state.data.plan==='free'?'<button class="primary-btn full" id="upgrade">See Founder Rate</button>':''}</div>
+    <div class="settings-card">
+      <div><h3 class="help-inline">Founder pricing ${helpTip('Everyone gets the same Trainer Floor product. The only difference is how early they joined. Founder rates stay locked while the subscription remains active.','About Founder Pricing')}</h3>
+      <p>Free through 3 active clients. Founder pricing is grouped into simple cohorts instead of changing by $1 for every person.</p></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px">
+        <div class="stat"><b>$25</b><span>First 25</span></div>
+        <div class="stat"><b>$50</b><span>26–50</span></div>
+        <div class="stat"><b>$75</b><span>51–100</span></div>
+        <div class="stat"><b>$99</b><span>Standard</span></div>
+      </div>
+      <p class="tiny" style="margin-bottom:0!important">Founding 25 is limited to the first 25 paid trainers. After each cohort fills, new trainers join at the next published rate. $99/month is the permanent standard-price cap.</p>
+      ${state.data.plan==='free'?'<button class="primary-btn full" id="upgrade">See Founder Pricing</button>':''}
+    </div>
     <div class="settings-card"><h3>Data backup</h3><p>Download a JSON copy of your trainer data anytime.</p><button class="ghost-btn full" id="export">Export backup</button></div>
     <div class="settings-card"><h3>Account</h3><p>${active} active clients synced to your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>`;
   if($('#upgrade')) $('#upgrade').onclick=()=>{state.modal={type:'upgrade'};render();};
@@ -1033,23 +1046,24 @@ function modalHtml(){
     const ex=currentSession().exercises[m.index]; return modalWrap('Exercise note',`<form id="exerciseNoteForm"><p class="muted">${esc(ex.name)}</p><div class="field"><textarea id="exerciseNoteText" placeholder="Cue, pain, setup, progression…">${esc(ex.note||'')}</textarea></div><button class="primary-btn full">Save note</button></form>`);
   }
   if(m.type==='picker') return pickerHtml();
-  if(m.type==='upgrade') return modalWrap('Founder Rate',`<div class="settings-card founder-sale">
-  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:#ff9a9d;margin-bottom:8px">Early Founder Pricing</div>
+  if(m.type==='upgrade') return modalWrap('Founder Pricing',`<div class="settings-card founder-sale">
+  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:#ff9a9d;margin-bottom:8px">Founding 25</div>
   <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
     <div style="font-size:24px;color:#777;text-decoration:line-through;text-decoration-thickness:2px">$99/month</div>
-    <div class="plan-price" style="font-size:44px;color:#fff">$9<span style="font-size:15px;letter-spacing:0;color:#aaa">/month</span></div>
+    <div class="plan-price" style="font-size:44px;color:#fff">$25<span style="font-size:15px;letter-spacing:0;color:#aaa">/month</span></div>
   </div>
-  <div style="font-weight:950;font-size:18px;margin-top:5px">Your Founder Rate</div>
-  <p style="margin-top:8px">Join at today's price and keep that monthly rate. Every new paid founder raises the price by <strong>$1/month</strong> for the next trainer, until the Founder Rate reaches the <strong>$99/month cap</strong>.</p>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
-    <div class="stat" style="text-align:center"><b>$9</b><span>You</span></div>
-    <div class="stat" style="text-align:center"><b>$10</b><span>Next founder</span></div>
-    <div class="stat" style="text-align:center"><b>$11</b><span>Then</span></div>
+  <div style="font-weight:950;font-size:18px;margin-top:5px">First 25 paid trainers</div>
+  <p style="margin-top:8px">Everyone gets the same Trainer Floor product. Early trainers simply lock a lower monthly rate while their subscription remains active.</p>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px">
+    <div class="stat" style="text-align:center"><b>$25</b><span>1–25</span></div>
+    <div class="stat" style="text-align:center"><b>$50</b><span>26–50</span></div>
+    <div class="stat" style="text-align:center"><b>$75</b><span>51–100</span></div>
+    <div class="stat" style="text-align:center"><b>$99</b><span>101+</span></div>
   </div>
-  <p class="tiny" style="margin-bottom:0!important">Example: Founder #1 locks $9/mo. Founder #2 locks $10/mo. Founder #3 locks $11/mo. Each new paid founder increases the rate by $1/month until it reaches $99/month. $99/month is the maximum Founder Rate.</p>
+  <p class="tiny" style="margin-bottom:0!important">When a cohort fills, new trainers move to the next published rate. There are no feature differences between cohorts. $99/month is the permanent standard-price cap.</p>
 </div>
-<button class="primary-btn full" id="prototypeUpgrade">Lock in $9/month Founder Rate</button>
-<p class="tiny">Checkout is not active yet. The price will only advance after a completed paid subscription once billing is connected.</p>`);
+<button class="primary-btn full" id="prototypeUpgrade">Founding 25 — $25/month</button>
+<p class="tiny">Billing is not active yet. No payment is taken from this prototype.</p>`);
   if(m.type==='history'){
     const s=state.data.sessions.find(x=>x.id===m.sessionId); const c=state.data.clients.find(x=>x.id===s?.clientId);
     return modalWrap(`${esc(c?.name||'Session')}`,`<p class="muted">${s?((s.sessionNote||'').startsWith('[DATE UNKNOWN]')?'Historical session — exact date unknown':new Date(s.completedAt).toLocaleString()):''}</p>${s?.sessionNote?`<div class="note-card"><div class="note-label">Session note</div><div class="note-text">${esc(s.sessionNote)}</div></div>`:''}<div class="client-list">${(s?.exercises||[]).map(ex=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(ex.name)}</div><div class="client-sub">${esc(historyExerciseSummary(ex))}</div></div></div>`).join('')}</div>`);
