@@ -91,7 +91,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.7.0';
+const APP_VERSION = '0.8.0';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -167,6 +167,7 @@ async function loadRemote(user){
     clients:(clientsRows||[]).map(c=>({id:c.id,name:c.name,note:c.note||'',archived:c.archived,createdAt:c.created_at})),
     sessions:(sessionsRows||[]).map(s=>({id:s.id,clientId:s.client_id,date:s.session_date,createdAt:s.created_at,completedAt:s.completed_at,sessionNote:s.session_note||'',exercises:Array.isArray(s.workout)?s.workout:[]})),
     plan:profile?.plan||'free'};
+  await mergeDuplicateClients();
 }
 const syncTimers = new Map();
 
@@ -373,6 +374,188 @@ function clientMatchKey(name){
   return aliases[key] || key;
 }
 
+
+function canonicalClientName(name){
+  const key=clientMatchKey(name);
+  const canonical={
+    'patricia wiener':'Patricia "Trish" Wiener',
+    'james gold':'Jim / James Gold',
+    'leonardo kusumo':'Leo / Leonardo Kusumo',
+    'jaime bott':'Jaime Bott'
+  };
+  return canonical[key] || String(name||'').trim();
+}
+
+async function mergeDuplicateClients(){
+  if(!state.data || !state.user) return;
+
+  const groups=new Map();
+  for(const client of state.data.clients.filter(c=>!c.archived)){
+    const key=clientMatchKey(client.name);
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(client);
+  }
+
+  for(const [key,clients] of groups){
+    if(clients.length<2) continue;
+
+    const scored=[...clients].sort((a,b)=>{
+      const aSessions=state.data.sessions.filter(s=>s.clientId===a.id).length;
+      const bSessions=state.data.sessions.filter(s=>s.clientId===b.id).length;
+      if(aSessions!==bSessions) return bSessions-aSessions;
+      const aNotes=(a.note||'').length, bNotes=(b.note||'').length;
+      if(aNotes!==bNotes) return bNotes-aNotes;
+      return new Date(a.createdAt||0)-new Date(b.createdAt||0);
+    });
+
+    const survivor=scored[0];
+    survivor.name=canonicalClientName(survivor.name);
+
+    const noteParts=[];
+    for(const client of clients){
+      const n=String(client.note||'').trim();
+      if(n && !noteParts.includes(n)) noteParts.push(n);
+    }
+    survivor.note=noteParts.join('\n\n');
+
+    for(const duplicate of scored.slice(1)){
+      const moved=state.data.sessions.filter(s=>s.clientId===duplicate.id);
+      for(const session of moved){
+        session.clientId=survivor.id;
+        await syncSession(session);
+      }
+      duplicate.archived=true;
+      await syncClient(duplicate);
+    }
+
+    await syncClient(survivor);
+  }
+}
+
+async function analyzeSmartHistory(text,filename='pasted notes'){
+  const raw=String(text||'').trim();
+  if(!raw){ toast('Paste notes or choose a file'); return; }
+
+  state.modal={type:'smartHistoryLoading',filename};
+  render();
+
+  try{
+    const response=await fetch('https://members.chrisjanke.com/api/trainer-floor/parse-history',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+authToken()
+      },
+      body:JSON.stringify({text:raw,filename})
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(data?.error||'Could not analyze history');
+
+    state.modal={type:'smartHistoryReview',parsed:data,filename};
+    render();
+  }catch(error){
+    console.error(error);
+    state.modal={type:'smartImportInput',error:error.message||'Could not analyze history'};
+    render();
+  }
+}
+
+function aiExerciseToApp(ex){
+  const sets=Array.isArray(ex?.sets)?ex.sets.map(v=>v===null||v===undefined?null:Number(v)): [];
+  return {
+    id:uid(),
+    name:String(ex?.name||'Exercise').trim(),
+    cat:String(ex?.category||'').trim().toLowerCase()||'other',
+    eq:String(ex?.equipment||'').trim().toLowerCase()||'other',
+    weight:String(ex?.weight??'').trim(),
+    sets:sets.length?sets:[null,null,null],
+    note:String(ex?.note||'').trim()
+  };
+}
+
+async function importSmartHistory(parsed){
+  const now=new Date().toISOString();
+  const existingByName=new Map(state.data.clients.map(c=>[clientMatchKey(c.name),c]));
+  let importedSessions=0;
+  let importedClients=0;
+  let unknownIndex=0;
+
+  for(const incoming of parsed.clients||[]){
+    const aliases=[incoming.name,...(incoming.aliases||[])].map(clientMatchKey);
+    let client=null;
+    for(const key of aliases){
+      if(existingByName.has(key)){ client=existingByName.get(key); break; }
+    }
+
+    if(!client){
+      client={
+        id:uid(),
+        name:canonicalClientName(incoming.name),
+        note:String(incoming.note||'').trim(),
+        archived:false,
+        createdAt:now
+      };
+      state.data.clients.push(client);
+      importedClients++;
+    }else{
+      client.name=canonicalClientName(client.name);
+      const incomingNote=String(incoming.note||'').trim();
+      if(incomingNote && !(client.note||'').includes(incomingNote)){
+        client.note=[client.note,incomingNote].filter(Boolean).join('\n\n');
+      }
+    }
+
+    for(const key of aliases) existingByName.set(key,client);
+    existingByName.set(clientMatchKey(client.name),client);
+    await syncClient(client);
+
+    for(const past of incoming.sessions||[]){
+      const hasDate=typeof past.date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(past.date);
+      const date=hasDate ? past.date : '1900-01-'+String(Math.min(28,++unknownIndex)).padStart(2,'0');
+      const unknownPrefix=hasDate?'':'[DATE UNKNOWN] ';
+      const note=unknownPrefix+String(past.session_note||'Imported historical workout.').trim();
+
+      const exercises=(past.exercises||[]).map(aiExerciseToApp);
+      let session=state.data.sessions.find(s=>
+        s.clientId===client.id &&
+        s.completedAt &&
+        s.date===date &&
+        (s.sessionNote||'')===note
+      );
+
+      if(!session){
+        const completedAt=date+'T12:00:00.000Z';
+        session={
+          id:uid(),clientId:client.id,date,
+          createdAt:completedAt,completedAt,
+          sessionNote:note,exercises
+        };
+        state.data.sessions.push(session);
+      }else{
+        session.exercises=exercises;
+      }
+      await syncSession(session);
+      importedSessions++;
+    }
+
+    if(Array.isArray(incoming.current_workout) && incoming.current_workout.length){
+      let current=state.data.sessions.find(s=>s.clientId===client.id && !s.completedAt);
+      if(!current){
+        current={
+          id:uid(),clientId:client.id,date:todayKey(),createdAt:now,
+          completedAt:null,sessionNote:'Imported current workout.',exercises:[]
+        };
+        state.data.sessions.push(current);
+      }
+      current.exercises=incoming.current_workout.map(aiExerciseToApp);
+      await syncSession(current);
+    }
+  }
+
+  await mergeDuplicateClients();
+  return {importedSessions,importedClients};
+}
+
 async function refreshClientRosterForImport(){
   const rows=await restSelect('tf_clients','select=*&order=created_at.asc');
   if(!state.data) return;
@@ -523,11 +706,10 @@ function renderClients(){
     <div class="page-title">
       <div><h1>Clients</h1><p>${clients.length} active ${clients.length===1?'client':'clients'}</p></div>
       <div class="row">
-        <button id="importClients" class="ghost-btn">Import CSV</button>
+        <button id="importClients" class="ghost-btn">Smart Import</button>
         <button id="addClient" class="primary-btn">+ Client</button>
       </div>
     </div>
-    <input id="clientCsvInput" type="file" accept=".csv,text/csv" hidden />
     <input id="clientSearch" class="search" placeholder="Search clients" />
     <div class="client-list" id="clientList"></div>`;
   const draw=(q='')=>{
@@ -535,7 +717,7 @@ function renderClients(){
     $('#clientList').innerHTML = filtered.length ? filtered.map(c=>{
       const last = [...state.data.sessions].reverse().find(s=>s.clientId===c.id && s.completedAt);
       return `<button class="client-card" data-client="${c.id}">
-        <div><div class="client-name">${esc(c.name)}</div><div class="client-sub">${last?'Last session '+new Date(last.completedAt).toLocaleDateString():'Ready for first session'}${c.note?' • note saved':''}</div></div>
+        <div><div class="client-name">${esc(c.name)}</div><div class="client-sub">${last?((last.sessionNote||'').startsWith('[DATE UNKNOWN]')?'Past session imported — date unknown':'Last session '+new Date(last.completedAt).toLocaleDateString()):'Ready for first session'}${c.note?' • note saved':''}</div></div>
         <div class="client-arrow">›</div>
       </button>`;
     }).join('') : `<div class="empty"><strong>${q?'No matches':'Add your first client'}</strong><p>${q?'Try a different name.':'This stays intentionally simple: client, workout, notes.'}</p>${q?'':'<button class="primary-btn" id="emptyAdd">+ Add client</button>'}</div>`;
@@ -545,8 +727,7 @@ function renderClients(){
   draw();
   $('#clientSearch').oninput=e=>draw(e.target.value);
   $('#addClient').onclick=()=>openClientModal();
-  $('#importClients').onclick=()=>$('#clientCsvInput').click();
-  $('#clientCsvInput').onchange=e=>{const file=e.target.files?.[0];e.target.value='';handleClientCsv(file);};
+  $('#importClients').onclick=()=>{state.modal={type:'smartImportInput'};render();};
 }
 
 function openClient(id){ state.selectedClientId=id; ensureTodaySession(id); state.view='workout'; render(); }
@@ -660,7 +841,7 @@ function renderHistory(){
     <div class="stats"><div class="stat"><b>${done.length}</b><span>Sessions</span></div><div class="stat"><b>${state.data.clients.filter(c=>!c.archived).length}</b><span>Clients</span></div><div class="stat"><b>${done.reduce((n,s)=>n+(s.exercises?.length||0),0)}</b><span>Exercises</span></div></div>
     <div class="client-list">${done.length?done.map(s=>{
       const c=state.data.clients.find(x=>x.id===s.clientId);
-      return `<button class="client-card" data-history="${s.id}"><div><div class="client-name">${esc(c?.name||'Archived client')}</div><div class="client-sub">${new Date(s.completedAt).toLocaleDateString()} • ${s.exercises.length} exercises${s.sessionNote?' • note saved':''}</div></div><div class="client-arrow">›</div></button>`;
+      return `<button class="client-card" data-history="${s.id}"><div><div class="client-name">${esc(c?.name||'Archived client')}</div><div class="client-sub">${(s.sessionNote||'').startsWith('[DATE UNKNOWN]')?'Date unknown':new Date(s.completedAt).toLocaleDateString()} • ${s.exercises.length} exercises${s.sessionNote?' • note saved':''}</div></div><div class="client-arrow">›</div></button>`;
     }).join(''):`<div class="empty"><strong>No completed sessions</strong><p>Finish a workout and it will appear here.</p></div>`}</div>`;
   document.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>{state.modal={type:'history',sessionId:b.dataset.history};render();});
 }
@@ -685,6 +866,35 @@ function modalHtml(){
   if(m.type==='client'){
     const c=m.clientId?state.data.clients.find(x=>x.id===m.clientId):null;
     return modalWrap(`${c?'Edit':'Add'} client`, `<form id="clientForm"><div class="field"><label>Name</label><input id="clientName" value="${esc(c?.name||'')}" required autofocus /></div><div class="field"><label>Client note</label><textarea id="clientNote" placeholder="Injuries, goals, coaching cues…">${esc(c?.note||'')}</textarea></div><button class="primary-btn full" type="submit">${c?'Save client':'Add client'}</button>${c?'<button class="danger-btn full" id="archiveClient" type="button">Archive client</button>':''}</form>`);
+  }
+  if(m.type==='smartImportInput'){
+    return modalWrap('Smart History Import',`
+      ${m.error?`<div class="note-card"><div class="note-text">${esc(m.error)}</div></div>`:''}
+      <p class="muted">Upload a CSV/TXT/TSV/JSON/Markdown file or paste whatever client notes you already have. Trainer Floor will reconstruct clients and past workouts for review.</p>
+      <div class="field"><label>Upload file</label><input id="smartImportFile" type="file" accept=".csv,.txt,.tsv,.md,.json,text/plain,text/csv,application/json" /></div>
+      <div class="field"><label>Or paste notes</label><textarea id="smartImportText" rows="10" placeholder="Paste old workout notes, exports, session logs, or client records here…"></textarea></div>
+      <button class="primary-btn full" id="analyzeSmartImport">Analyze training history</button>
+      <p class="tiny">AI analyzes the text on the private server. You review the reconstructed history before it is saved.</p>`);
+  }
+  if(m.type==='smartHistoryLoading'){
+    return modalWrap('Analyzing history',`<div class="empty"><strong>Reconstructing client records…</strong><p>${esc(m.filename||'Import')}</p></div>`);
+  }
+  if(m.type==='smartHistoryReview'){
+    const p=m.parsed||{}; const clients=p.clients||[];
+    const sessionCount=clients.reduce((n,c)=>n+(c.sessions?.length||0),0);
+    const exerciseCount=clients.reduce((n,c)=>n+(c.sessions||[]).reduce((x,s)=>x+(s.exercises?.length||0),0)+(c.current_workout?.length||0),0);
+    const undated=clients.reduce((n,c)=>n+(c.sessions||[]).filter(s=>!s.date).length,0);
+    return modalWrap('Review reconstructed history',`
+      <div class="stats">
+        <div class="stat"><b>${clients.length}</b><span>Clients</span></div>
+        <div class="stat"><b>${sessionCount}</b><span>Past sessions</span></div>
+        <div class="stat"><b>${exerciseCount}</b><span>Exercises</span></div>
+      </div>
+      ${undated?`<div class="note-card"><div class="note-text">${undated} past session${undated===1?' has':'s have'} no exact date. Trainer Floor will preserve them as date-unknown history instead of inventing dates.</div></div>`:''}
+      ${(p.warnings||[]).length?`<div class="settings-card"><h3>Review notes</h3><p>${(p.warnings||[]).map(w=>esc(w)).join('<br>')}</p></div>`:''}
+      <div class="client-list">${clients.slice(0,8).map(c=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(c.name)}</div><div class="client-sub">${c.sessions?.length||0} past session${(c.sessions?.length||0)===1?'':'s'}${c.current_workout?.length?' • current workout':''}</div></div></div>`).join('')}${clients.length>8?`<div class="muted" style="padding:8px 2px">+${clients.length-8} more</div>`:''}</div>
+      <button class="primary-btn full" id="confirmSmartHistory">Import reconstructed history</button>
+      <button class="ghost-btn full" id="backSmartHistory">Back</button>`);
   }
   if(m.type==='csvImport'){
     const preview=m.rows.slice(0,6);
@@ -732,7 +942,7 @@ function modalHtml(){
 <p class="tiny">Checkout is not active yet. The price will only advance after a completed paid subscription once billing is connected.</p>`);
   if(m.type==='history'){
     const s=state.data.sessions.find(x=>x.id===m.sessionId); const c=state.data.clients.find(x=>x.id===s?.clientId);
-    return modalWrap(`${esc(c?.name||'Session')}`,`<p class="muted">${s?new Date(s.completedAt).toLocaleString():''}</p>${s?.sessionNote?`<div class="note-card"><div class="note-label">Session note</div><div class="note-text">${esc(s.sessionNote)}</div></div>`:''}<div class="client-list">${(s?.exercises||[]).map(ex=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(ex.name)}</div><div class="client-sub">${ex.weight?esc(ex.weight)+' lb • ':''}${ex.sets.filter(v=>v!==null).join(', ')||'No reps logged'}</div></div></div>`).join('')}</div>`);
+    return modalWrap(`${esc(c?.name||'Session')}`,`<p class="muted">${s?((s.sessionNote||'').startsWith('[DATE UNKNOWN]')?'Historical session — exact date unknown':new Date(s.completedAt).toLocaleString()):''}</p>${s?.sessionNote?`<div class="note-card"><div class="note-label">Session note</div><div class="note-text">${esc(s.sessionNote)}</div></div>`:''}<div class="client-list">${(s?.exercises||[]).map(ex=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(ex.name)}</div><div class="client-sub">${ex.weight?esc(ex.weight)+' lb • ':''}${ex.sets.filter(v=>v!==null).join(', ')||'No reps logged'}</div></div></div>`).join('')}</div>`);
   }
   return '';
 }
@@ -763,6 +973,39 @@ function wireModal(){
       if(m.clientId){client=state.data.clients.find(x=>x.id===m.clientId);client.name=name;client.note=note;} else {client={id:uid(),name,note,archived:false,createdAt:new Date().toISOString()};state.data.clients.push(client);}
       saveClient(client);state.modal=null;render();toast(m.clientId?'Client saved':'Client added');};
     if($('#archiveClient')) $('#archiveClient').onclick=()=>{const c=state.data.clients.find(x=>x.id===m.clientId);c.archived=true;saveClient(c);state.modal=null;state.view='clients';render();toast('Client archived');};
+  }
+  if(m.type==='smartImportInput') {
+    const fileInput=$('#smartImportFile');
+    const textArea=$('#smartImportText');
+    if(fileInput) fileInput.onchange=async e=>{
+      const file=e.target.files?.[0];
+      if(!file) return;
+      try{
+        textArea.value=await file.text();
+        textArea.dataset.filename=file.name;
+      }catch(error){
+        console.error(error); toast('Could not read that file');
+      }
+    };
+    if($('#analyzeSmartImport')) $('#analyzeSmartImport').onclick=()=>{
+      analyzeSmartHistory(textArea?.value||'',textArea?.dataset?.filename||'pasted notes');
+    };
+  }
+  if(m.type==='smartHistoryReview') {
+    if($('#backSmartHistory')) $('#backSmartHistory').onclick=()=>{state.modal={type:'smartImportInput'};render();};
+    if($('#confirmSmartHistory')) $('#confirmSmartHistory').onclick=async()=>{
+      const btn=$('#confirmSmartHistory');
+      btn.disabled=true; btn.textContent='Importing history…';
+      try{
+        const result=await importSmartHistory(m.parsed||{});
+        state.modal=null; state.view='clients'; render();
+        toast(`Imported ${result.importedSessions} past sessions`);
+      }catch(error){
+        console.error(error);
+        btn.disabled=false; btn.textContent='Import reconstructed history';
+        toast(error.message||'Import failed');
+      }
+    };
   }
   if(m.type==='csvImport' && $('#confirmCsvImport')) $('#confirmCsvImport').onclick=async()=>{
     const btn=$('#confirmCsvImport');
