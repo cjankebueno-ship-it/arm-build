@@ -990,10 +990,10 @@ function renderSettings(){
     <div class="page-title"><div><h1 class="help-inline">Settings ${helpTip('Account, plan, pricing, and backup controls.','About Settings')}</h1><p>${esc(p.email)}</p></div></div>
     <div class="settings-card"><div class="settings-row"><div><h3>${esc(p.name)}</h3><p>${state.data.profile.trainerNumber===1?'Founder access • unlimited clients':state.data.plan==='pro'?'Pro • unlimited clients':`Free • up to ${FREE_CLIENT_LIMIT} clients`}</p></div><span class="badge ${state.data.plan}">${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span></div></div>
     ${appearanceHtml()}
-    ${founderOfferHtml()}
+    ${state.data.profile.trainerNumber===1?'':founderOfferHtml()}
     ${asanaSettingsHtml()}
     <div class="settings-card"><h3>Data backup</h3><p>Download a JSON copy of your trainer data anytime.</p><button class="ghost-btn full" id="export">Export backup</button></div>
-    <div class="settings-card"><h3>Account</h3><p>${active} active clients in your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>
+    <div class="settings-card"><h3>Account</h3><p>${active} active client${active===1?'':'s'} in your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>
     <p class="build-label">Trainer Floor ${APP_VERSION}</p>`;
   wireFounderOffer();wireAppearance();wireAsanaSettings();
   $('#logout').onclick=async()=>{if(deviceStore?.status().pending){state.modal={type:'saveStatus'};render();toast('Sync pending changes before signing out');return;}deviceStore?.close();clearTimeout(saveRetry);deviceStore=null;await SB.auth.signOut();state.user=null;state.data=null;state.modal=null;renderLogin();};
