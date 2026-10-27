@@ -94,17 +94,36 @@ async function validSession(){
   catch{ s=await refreshSession(s); if(!s)return null; try{const {data:user}=await api('/auth/v1/user',{token:s.access_token});return {session:s,user}}catch{writeStoredSession(null);return null}}
 }
 function authToken(){return readStoredSession()?.access_token||''}
+async function freshAuthToken(){
+  const current=await validSession();
+  if(!current?.session?.access_token) throw new Error('Your session expired. Please sign in again.');
+  if(state.user && current.user) state.user=current.user;
+  return current.session.access_token;
+}
+async function authenticatedApi(path,options={}){
+  const token=await freshAuthToken();
+  try{
+    return await api(path,{...options,token});
+  }catch(error){
+    const msg=String(error?.message||'').toLowerCase();
+    if(!msg.includes('jwt expired') && !msg.includes('invalid jwt') && !msg.includes('token is expired')) throw error;
+    const refreshed=await refreshSession(readStoredSession());
+    if(!refreshed?.access_token) throw new Error('Your session expired. Please sign in again.');
+    return api(path,{...options,token:refreshed.access_token});
+  }
+}
 function q(v){return encodeURIComponent(v)}
-async function restSelect(table,query=''){const {data}=await api('/rest/v1/'+table+(query?'?'+query:''),{token:authToken(),headers:{Accept:'application/json'}});return data}
-async function restInsert(table,payload,{returnRow=false}={}){const {data}=await api('/rest/v1/'+table,{method:'POST',body:payload,token:authToken(),headers:{Prefer:returnRow?'return=representation':'return=minimal'}});return data}
-async function restUpsert(table,payload){await api('/rest/v1/'+table,{method:'POST',body:payload,token:authToken(),headers:{Prefer:'resolution=merge-duplicates,return=minimal'}})}
+async function restSelect(table,query=''){const {data}=await authenticatedApi('/rest/v1/'+table+(query?'?'+query:''),{headers:{Accept:'application/json'}});return data}
+async function restInsert(table,payload,{returnRow=false}={}){const {data}=await authenticatedApi('/rest/v1/'+table,{method:'POST',body:payload,headers:{Prefer:returnRow?'return=representation':'return=minimal'}});return data}
+async function restUpsert(table,payload){await authenticatedApi('/rest/v1/'+table,{method:'POST',body:payload,headers:{Prefer:'resolution=merge-duplicates,return=minimal'}})}
 const SB={auth:{
   async getSession(){const x=await validSession();return {data:{session:x?.session?{...x.session,user:x.user}:null}}},
   async signInWithPassword({email,password}){try{const {data}=await api('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password}});writeStoredSession(data);return {data:{session:data,user:data.user},error:null}}catch(error){return {data:{},error}}},
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
+  async refreshSession(){const data=await refreshSession(readStoredSession());return {data:{session:data},error:data?null:new Error('Session refresh failed')}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.11.0';
+const APP_VERSION = '0.11.1';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -467,14 +486,30 @@ async function analyzeSmartHistory(text,filename='pasted notes'){
   render();
 
   try{
-    const response=await fetch('https://members.chrisjanke.com/api/trainer-floor/parse-history',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':'Bearer '+authToken()
-      },
-      body:JSON.stringify({text:raw,filename})
-    });
+    const requestSmartImport=async()=>{
+      const token=await freshAuthToken();
+      return fetch('https://members.chrisjanke.com/api/trainer-floor/parse-history',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+token
+        },
+        body:JSON.stringify({text:raw,filename})
+      });
+    };
+    let response=await requestSmartImport();
+    if(response.status===401){
+      const refreshed=await refreshSession(readStoredSession());
+      if(!refreshed?.access_token) throw new Error('Your session expired. Please sign in again.');
+      response=await fetch('https://members.chrisjanke.com/api/trainer-floor/parse-history',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+refreshed.access_token
+        },
+        body:JSON.stringify({text:raw,filename})
+      });
+    }
     const data=await response.json().catch(()=>({}));
     if(!response.ok) throw new Error(data?.error||'Could not analyze history');
 
