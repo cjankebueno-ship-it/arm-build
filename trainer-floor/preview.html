@@ -18,7 +18,7 @@
  window.addEventListener('message',event=>{if(event.source!==parent)return;if(event.data?.type==='preview-clock')previewClockOffset=Number(event.data.offset)||0;if(event.data?.type==='preview-import')analyzeImportedData(JSON.stringify({clients:[{name:'Taylor Example',sessions:[{date:'2026-10-20',completed:false,exercises:[{name:'Dumbbell Row',weight:'25 lb',sets:[12,11,10]}]}]}]}),'Sample GPT history');});
  render();
  `;
- if(!html.includes("const APP_VERSION = '0.16.1'"))throw Error('Expected version 0.16.1');
+ if(!html.includes("const APP_VERSION = '0.16.2'"))throw Error('Expected version 0.16.2');
  document.querySelector('iframe').srcdoc=html.replace(/\nstart\(\);/,()=> '\n'+setup);
  document.querySelector('#salesPhone').onclick=()=>{const frame=document.querySelector('iframe');frame.removeAttribute('srcdoc');frame.style.width='390px';frame.style.maxWidth='100%';frame.src=root+'sales.html';};
  const send=data=>document.querySelector('iframe').contentWindow.postMessage(data,'*');document.querySelectorAll('[data-offset]').forEach(button=>button.onclick=()=>send({type:'preview-clock',offset:+button.dataset.offset}));document.querySelector('#sampleImport').onclick=()=>send({type:'preview-import'});

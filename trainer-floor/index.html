@@ -75,17 +75,17 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 
 .last-workout{background:linear-gradient(135deg,#151e39,#11151e);border:1px solid #33487d;border-radius:16px;padding:16px;margin-bottom:16px}.last-workout p{font-size:14px;line-height:1.5;color:#c4cee7}.last-workout .note-label{font-size:12px;color:#a9bfff;font-weight:800}.previous-performance{padding:10px 12px;border-radius:10px;background:#101520;border-left:3px solid #4169e1;margin-top:12px;color:#b9c7eb;font-size:12px;line-height:1.55}.history-date{color:#a9bfff;font-size:13px;font-weight:700;margin-top:6px}.filter-label{display:block;color:var(--muted);font-size:12px;margin:0 0 7px}.import-session{border-top:1px solid var(--line);padding:10px 0;font-size:13px;line-height:1.5}details{margin-top:10px;font-size:13px;line-height:1.5}summary{cursor:pointer;color:#a9bfff}details .note-text{white-space:pre-wrap}.client-card>div:first-child{min-width:0}.client-sub{line-height:1.5;overflow-wrap:anywhere}@media(max-width:440px){.page-title{flex-wrap:wrap}.session-bar{flex-wrap:wrap}.header-actions .small-btn{padding:9px}.client-header h1{font-size:22px}}
 </style>
-<link rel="stylesheet" href="features.css?v=0.16.1" />
+<link rel="stylesheet" href="features.css?v=0.16.2" />
 </head>
 <body>
   <div id="app"></div>
   <div id="toast" class="toast" aria-live="polite"></div>
-  <script src="history.js?v=0.16.1"></script>
-  <script src="store.js?v=0.16.1"></script>
-  <script src="progress.js?v=0.16.1"></script>
-  <script src="features.js?v=0.16.1"></script>
-  <script src="import-ui.js?v=0.16.1"></script>
-  <script src="founder.js?v=0.16.1"></script>
+  <script src="history.js?v=0.16.2"></script>
+  <script src="store.js?v=0.16.2"></script>
+  <script src="progress.js?v=0.16.2"></script>
+  <script src="features.js?v=0.16.2"></script>
+  <script src="import-ui.js?v=0.16.2"></script>
+  <script src="founder.js?v=0.16.2"></script>
   <script>
 const H = TrainerHistory;
 const SUPABASE_URL = 'https://srsuoehdnfzobzvtkldz.supabase.co';
@@ -147,7 +147,7 @@ const SB={auth:{
   async refreshSession(){const data=await refreshSession(readStoredSession());return {data:{session:data},error:data?null:new Error('Session refresh failed')}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.16.1';
+const APP_VERSION = '0.16.2';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -425,7 +425,7 @@ function render(){
       <header class="topbar">
         <div class="brand">TRAINER<span>•</span>FLOOR</div>
         <div class="top-actions">
-          <span class="badge ${state.data.plan}">Trainer #${state.data.profile.trainerNumber || '—'} • ${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span>
+          <span class="badge ${state.data.plan}">${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span>
         </div>
       </header>
       <main id="screen" class="screen"></main>
@@ -970,7 +970,7 @@ function renderSettings(){
   const p=state.data.profile; const active=state.data.clients.filter(c=>!c.archived).length;
   $('#screen').innerHTML=`
     <div class="page-title"><div><h1 class="help-inline">Settings ${helpTip('Account, plan, pricing, and backup controls.','About Settings')}</h1><p>${esc(p.email)}</p></div></div>
-    <div class="settings-card"><div class="settings-row"><div><h3>${esc(p.name)}</h3><p>${state.data.profile.trainerNumber===1?'Founder access • unlimited clients':state.data.plan==='pro'?'Pro • unlimited clients':`Free • up to ${FREE_CLIENT_LIMIT} clients`}</p></div><span class="badge ${state.data.plan}">Trainer #${state.data.profile.trainerNumber || '—'} • ${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span></div></div>
+    <div class="settings-card"><div class="settings-row"><div><h3>${esc(p.name)}</h3><p>${state.data.profile.trainerNumber===1?'Founder access • unlimited clients':state.data.plan==='pro'?'Pro • unlimited clients':`Free • up to ${FREE_CLIENT_LIMIT} clients`}</p></div><span class="badge ${state.data.plan}">${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span></div></div>
     ${founderOfferHtml()}
     <div class="settings-card"><h3>Asana sync</h3><p>${state.data.integration?'Connected · checks hourly. Completed sessions include a summary and every recorded exercise, weight, set, and rep.':'Not connected for this account.'}</p><p class="tiny">${state.data.integration?.last_checked_at?'Last checked: '+esc(new Date(state.data.integration.last_checked_at).toLocaleString()):''}</p></div><div class="settings-card"><h3>Data backup</h3><p>Download a JSON copy of your trainer data anytime.</p><button class="ghost-btn full" id="export">Export backup</button></div>
     <div class="settings-card"><h3>Account</h3><p>${active} active clients synced to your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>
