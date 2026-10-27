@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Trainer Floor — Founder Pricing</title>
+<style>
+:root{--bg:#0b0b0c;--panel:#151517;--line:#2d2d31;--text:#f7f7f8;--muted:#9b9ba3;--red:#ef3e43;--green:#42c67a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 18px 70px}
+a{color:inherit}
+.brand{font-size:28px;font-weight:950;letter-spacing:-.06em}.brand span{color:var(--red)}
+.hero{padding:54px 0 34px}.eyebrow{font-size:12px;font-weight:900;letter-spacing:.11em;text-transform:uppercase;color:#ff9a9d}
+h1{font-size:52px;line-height:.98;letter-spacing:-.06em;margin:12px 0 16px}
+.lead{font-size:19px;line-height:1.5;color:#c1c1c8;max-width:650px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;margin-top:16px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.tier{background:#101012;border:1px solid var(--line);border-radius:15px;padding:16px;text-align:center}
+.tier.current{border-color:#6a292d;background:#211416}
+.price{font-size:30px;font-weight:950}.tier small{display:block;color:var(--muted);margin-top:5px;line-height:1.35}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.btn{display:inline-block;border-radius:12px;padding:13px 16px;text-decoration:none;font-weight:900;border:1px solid var(--line);background:#1c1c20}
+.btn.primary{background:var(--red);border-color:var(--red)}
+ul{color:#c5c5cd;line-height:1.65;padding-left:20px}
+.note{font-size:13px;color:var(--muted);line-height:1.5}
+@media(max-width:640px){h1{font-size:40px}.grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">TRAINER<span>•</span>FLOOR</div>
+
+  <section class="hero">
+    <div class="eyebrow">Founder pricing</div>
+    <h1>Same product. Earlier trainers lock a lower rate.</h1>
+    <p class="lead">Trainer Floor is free for up to 3 active clients. When a trainer is ready to upgrade, the price depends only on which founder cohort still has room — not on features, usage tricks, or confusing add-ons.</p>
+
+    <div class="grid">
+      <div class="tier current"><div class="price">$25</div><strong>Founding 25</strong><small>Paid trainers 1–25</small></div>
+      <div class="tier"><div class="price">$50</div><strong>Early Founders</strong><small>Paid trainers 26–50</small></div>
+      <div class="tier"><div class="price">$75</div><strong>Launch Founders</strong><small>Paid trainers 51–100</small></div>
+      <div class="tier"><div class="price">$99</div><strong>Standard</strong><small>Trainer 101+</small></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 style="margin-top:0">Why the cohorts exist</h2>
+    <ul>
+      <li>Early trainers help shape the product, so they keep an earlier price.</li>
+      <li>When a cohort fills, new trainers move to the next published rate.</li>
+      <li>Every cohort gets the same Trainer Floor product.</li>
+      <li>Your monthly rate stays locked while your subscription remains active.</li>
+      <li>$99/month is the permanent standard-price cap.</li>
+    </ul>
+    <p class="note">No fake countdowns or hidden price jumps. The only scarcity is the published number of spots in each founder cohort.</p>
+  </section>
+
+  <section class="card">
+    <h2 style="margin-top:0">Start without moving your business manually</h2>
+    <p class="lead" style="font-size:16px">Smart Import can take a CSV, old workout notes, pasted text, or even a bulk summary from ChatGPT, Claude, or Gemini. Trainer Floor organizes clients, past workouts, weights, sets, reps, and notes for review.</p>
+    <div class="row">
+      <a class="btn primary" href="./index.html">Open Trainer Floor</a>
+      <a class="btn" href="./index.html">Create trainer account</a>
+    </div>
+    <p class="note">Billing is not active in this prototype yet. Creating an account does not charge a card.</p>
+  </section>
+</main>
+</body>
+</html>
