@@ -71,3 +71,5 @@ test('progression dialog renders before wiring its controls, and stores its sele
 test('network failure during token refresh preserves credentials for reconnect',async()=>{
  const a=app();a.context.token={access_token:'fixture',refresh_token:'fixture-refresh',expires_at:1};a.run('writeStoredSession(token);api=async()=>{throw Error("Network unavailable")};');await assert.rejects(a.run('refreshSession(readStoredSession())'),/Network/);assert.equal(a.run('readStoredSession().refresh_token'),'fixture-refresh');
 });
+
+test('completed workout summaries retain unknown set positions',()=>{const a=app();const summary=a.run("historyExerciseSummary({weight:'25 lb',sets:[12,null,10]})");assert.match(summary,/Set 2: 25 lb × reps not recorded/);assert.match(summary,/25 lb × 12 reps/);assert.match(summary,/25 lb × 10 reps/);});

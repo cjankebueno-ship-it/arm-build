@@ -75,17 +75,17 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 
 .last-workout{background:linear-gradient(135deg,#151e39,#11151e);border:1px solid #33487d;border-radius:16px;padding:16px;margin-bottom:16px}.last-workout p{font-size:14px;line-height:1.5;color:#c4cee7}.last-workout .note-label{font-size:12px;color:#a9bfff;font-weight:800}.previous-performance{padding:10px 12px;border-radius:10px;background:#101520;border-left:3px solid #4169e1;margin-top:12px;color:#b9c7eb;font-size:12px;line-height:1.55}.history-date{color:#a9bfff;font-size:13px;font-weight:700;margin-top:6px}.filter-label{display:block;color:var(--muted);font-size:12px;margin:0 0 7px}.import-session{border-top:1px solid var(--line);padding:10px 0;font-size:13px;line-height:1.5}details{margin-top:10px;font-size:13px;line-height:1.5}summary{cursor:pointer;color:#a9bfff}details .note-text{white-space:pre-wrap}.client-card>div:first-child{min-width:0}.client-sub{line-height:1.5;overflow-wrap:anywhere}@media(max-width:440px){.page-title{flex-wrap:wrap}.session-bar{flex-wrap:wrap}.header-actions .small-btn{padding:9px}.client-header h1{font-size:22px}}
 </style>
-<link rel="stylesheet" href="features.css?v=0.16.0" />
+<link rel="stylesheet" href="features.css?v=0.16.1" />
 </head>
 <body>
   <div id="app"></div>
   <div id="toast" class="toast" aria-live="polite"></div>
-  <script src="history.js?v=0.16.0"></script>
-  <script src="store.js?v=0.16.0"></script>
-  <script src="progress.js?v=0.16.0"></script>
-  <script src="features.js?v=0.16.0"></script>
-  <script src="import-ui.js?v=0.16.0"></script>
-  <script src="founder.js?v=0.16.0"></script>
+  <script src="history.js?v=0.16.1"></script>
+  <script src="store.js?v=0.16.1"></script>
+  <script src="progress.js?v=0.16.1"></script>
+  <script src="features.js?v=0.16.1"></script>
+  <script src="import-ui.js?v=0.16.1"></script>
+  <script src="founder.js?v=0.16.1"></script>
   <script>
 const H = TrainerHistory;
 const SUPABASE_URL = 'https://srsuoehdnfzobzvtkldz.supabase.co';
@@ -147,7 +147,7 @@ const SB={auth:{
   async refreshSession(){const data=await refreshSession(readStoredSession());return {data:{session:data},error:data?null:new Error('Session refresh failed')}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.16.0';
+const APP_VERSION = '0.16.1';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -869,11 +869,8 @@ function formatHistoryWeight(value){
 }
 
 function historyExerciseSummary(ex){
-  const weight=formatHistoryWeight(ex?.weight);
-  const reps=(ex?.sets||[])
-    .filter(v=>v!==null && v!==undefined && Number.isFinite(Number(v)))
-    .map(Number);
-  if(reps.length) return reps.map(r=>weight+' × '+r+' reps').join(' • ');
+  const weight=formatHistoryWeight(ex?.weight),sets=ex?.sets||[];
+  if(sets.length)return sets.map((value,index)=>{const reps=H.validRep(value);return reps===null?'Set '+(index+1)+': '+weight+' × reps not recorded':weight+' × '+reps+' reps';}).join(' • ');
   return weight+' × reps not recorded';
 }
 

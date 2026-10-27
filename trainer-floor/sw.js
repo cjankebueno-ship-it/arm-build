@@ -1,5 +1,5 @@
-const CACHE='trainer-floor-shell-0.16.0';
-const SHELL=['./','./index.html','./history.js?v=0.16.0','./store.js?v=0.16.0','./progress.js?v=0.16.0','./features.js?v=0.16.0','./features.css?v=0.16.0','./manifest.webmanifest','./icon.svg','./icon-180.png','./icon-192.png','./icon-512.png','./import-ui.js?v=0.16.0','./founder.js?v=0.16.0'];
+const CACHE='trainer-floor-shell-0.16.1';
+const SHELL=['./','./index.html','./history.js?v=0.16.1','./store.js?v=0.16.1','./progress.js?v=0.16.1','./features.js?v=0.16.1','./features.css?v=0.16.1','./manifest.webmanifest','./icon.svg','./icon-180.png','./icon-192.png','./icon-512.png','./import-ui.js?v=0.16.1','./founder.js?v=0.16.1'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('trainer-floor-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
