@@ -46,10 +46,11 @@ test('progress includes completed numeric results and keeps kg, lb and uncertain
 });
 function app(){
  const elements=new Map();const el=selector=>{if(!elements.has(selector))elements.set(selector,{value:'',textContent:'',classList:{toggle(){},add(){},remove(){}},dataset:{}});return elements.get(selector);};
- const storage=memory();const context=vm.createContext({TrainerStore:{Store},TrainerProgress:P,TrainerHistory:H,crypto,console,Date,setTimeout,clearTimeout,localStorage:storage,navigator:{onLine:true},document:{querySelector:el,querySelectorAll:()=>[]},window:{},location:{hostname:'test'}});
+ const storage=memory();const context=vm.createContext({TrainerStore:{Store},TrainerProgress:P,TrainerHistory:H,crypto,console,Date,setTimeout,clearTimeout,localStorage:storage,navigator:{onLine:true},document:{querySelector:el,querySelectorAll:()=>[]},window:{},URL,URLSearchParams,location:{hostname:'test',hash:''}});
  vm.runInContext(fs.readFileSync(require.resolve('../trainer-floor/features.js'),'utf8'),context);
   vm.runInContext(fs.readFileSync(require.resolve('../trainer-floor/import-ui.js'),'utf8'),context);
   vm.runInContext(fs.readFileSync(require.resolve('../trainer-floor/founder.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(require.resolve('../trainer-floor/asana.js'),'utf8'),context);
  const html=fs.readFileSync(require.resolve('../trainer-floor/index.html'),'utf8');vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1].replace(/\nstart\(\);/,''),context);
  vm.runInContext(`state.user={id:'owner'};state.data={clients:[],sessions:[],plan:'pro'};render=()=>{};toast=message=>{lastToast=message};saveSession=s=>{saved=s;return true;};`,context);
  return {run:code=>vm.runInContext(code,context),el,storage,context};
@@ -73,3 +74,19 @@ test('network failure during token refresh preserves credentials for reconnect',
 });
 
 test('completed workout summaries retain unknown set positions',()=>{const a=app();const summary=a.run("historyExerciseSummary({weight:'25 lb',sets:[12,null,10]})");assert.match(summary,/Set 2: 25 lb × reps not recorded/);assert.match(summary,/25 lb × 12 reps/);assert.match(summary,/25 lb × 10 reps/);});
+
+test('delayed account extras cannot overwrite a newly signed-in trainer',async()=>{
+ const a=app();let release;const wait=new Promise(resolve=>release=resolve);a.context.wait=wait;
+ a.run("restSelectAll=async()=>{await wait;return [{private:'old account'}]};restSelect=async()=>[];");
+ const pending=a.run('refreshExtras()');a.run("state.user={id:'different'};state.data={clients:[],sessions:[]};");release();await pending;
+ assert.equal(a.run('state.data.recovered'),undefined);assert.equal(a.run('state.data.integration'),undefined);
+});
+test('Asana help is explicit about shared project visibility and connection availability',()=>{
+ const a=app();const html=a.run('asanaSettingsHtml()');assert.match(html,/Anyone with access/);assert.match(html,/setup is not complete/);assert.match(html,/Connect Asana/);
+ a.run("getAsanaUi().status={available:true,connected:true,enabled:true,project:{name:'<script>bad<\/script>'}};");
+ assert.match(a.run('asanaSettingsHtml()'),/&lt;script&gt;/);
+});
+test('switching accounts while refreshing credentials prevents an Asana request',async()=>{
+ const a=app();let release;const wait=new Promise(resolve=>release=resolve);a.context.wait=wait;let calls=0;a.context.fetch=async()=>{calls++;return Response.json({});};
+ a.run("freshAuthToken=async()=>{await wait;return 'token'}");const pending=a.run("asanaRequest('status')");a.run("state.user={id:'other'}");release();await assert.rejects(pending,/same trainer/);assert.equal(calls,0);
+});
