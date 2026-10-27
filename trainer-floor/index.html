@@ -55,7 +55,20 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .sep{height:1px;background:var(--line);margin:14px 0}.row{display:flex;align-items:center;gap:10px}.grow{flex:1}.right{margin-left:auto}
 @media (min-width:700px){.modal{border-radius:24px;margin-bottom:18px}.modal-backdrop{align-items:center}.screen{padding-left:24px;padding-right:24px}.topbar{padding-left:24px;padding-right:24px}}
 
-  </style>
+  
+.help-wrap{position:relative;display:inline-flex;align-items:center;vertical-align:middle;margin-left:6px}
+.help-dot{width:19px;height:19px;border-radius:50%;border:1px solid #4a4a50;background:#202024;color:#bdbdc5;font-size:11px;font-weight:950;line-height:1;display:grid;place-items:center;padding:0;cursor:help}
+.help-dot:hover,.help-dot:focus-visible{border-color:#777;color:#fff;background:#2a2a2f}
+.help-tip{position:absolute;z-index:80;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(3px);width:min(290px,76vw);background:#27272c;border:1px solid #4a4a50;color:#f0f0f3;padding:10px 11px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.45);font-size:12px;line-height:1.4;font-weight:600;letter-spacing:0;text-transform:none;text-align:left;white-space:normal;opacity:0;visibility:hidden;pointer-events:none;transition:.12s ease}
+.help-tip::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#4a4a50}
+.help-wrap:hover .help-tip,.help-wrap:focus-within .help-tip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.help-inline{display:inline-flex;align-items:center}
+.import-hero{background:#111216;border:1px solid #32343b;border-radius:16px;padding:14px;margin:12px 0}
+.import-hero strong{display:block;font-size:17px;margin-bottom:5px}
+.import-hero p{margin:0;color:#b4b4bd;line-height:1.45;font-size:13px}
+@media (max-width:520px){.help-tip{left:auto;right:-10px;transform:translateY(3px);width:min(260px,80vw)}.help-wrap:hover .help-tip,.help-wrap:focus-within .help-tip{transform:translateY(0)}.help-tip::after{left:auto;right:13px}}
+
+</style>
 </head>
 <body>
   <div id="app"></div>
@@ -91,7 +104,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.9.0';
+const APP_VERSION = '0.9.1';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -150,6 +163,10 @@ const state = {
 const $ = (s) => document.querySelector(s);
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
 const esc = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+function helpTip(text,label='More information'){
+  return `<span class="help-wrap"><button class="help-dot" type="button" aria-label="${esc(label)}">?</button><span class="help-tip" role="tooltip">${esc(text)}</span></span>`;
+}
+
 const todayKey = () => new Date().toISOString().slice(0,10);
 const niceDate = (d=new Date()) => d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
 
@@ -729,9 +746,9 @@ function renderClients(){
   const clients = activeClientsForDisplay();
   $('#screen').innerHTML = `
     <div class="page-title">
-      <div><h1>Clients</h1><p>${clients.length} active ${clients.length===1?'client':'clients'}</p></div>
+      <div><h1 class="help-inline">Clients ${helpTip('Your active roster. Open a client to train them, review notes, or see workout history.','About Clients')}</h1><p>${clients.length} active ${clients.length===1?'client':'clients'}</p></div>
       <div class="row">
-        <button id="importClients" class="ghost-btn">Smart Import</button>
+        <span class="help-inline"><button id="importClients" class="ghost-btn">Smart Import</button>${helpTip('Bring bulk client data from anywhere — including ChatGPT, Claude, Gemini, spreadsheets, exports, or messy notes. Trainer Floor organizes it into clients and workouts for you.','About Smart Import')}</span>
         <button id="addClient" class="primary-btn">+ Client</button>
       </div>
     </div>
@@ -785,11 +802,11 @@ function renderWorkout(){
       <div class="header-actions"><button class="small-btn" id="editClient">Edit</button></div>
     </div>
     <div class="note-card" id="clientNoteCard">
-      <div class="note-label">Client note</div>
+      <div class="note-label help-inline">Client note ${helpTip('Persistent coaching context: goals, injuries, limitations, preferences, and cues you want to remember next time.','About Client Notes')}</div>
       <div class="note-text ${client.note?'':'note-empty'}">${client.note?esc(client.note):'Tap to add a coaching note.'}</div>
     </div>
     <div class="session-bar">
-      <div><div class="session-title">Workout</div><div class="session-date">Tap a circle: 15 → 14 → 13…</div></div>
+      <div><div class="session-title help-inline">Workout ${helpTip('Today’s working session. Finish it to save it permanently into History.','About Today’s Workout')}</div><div class="session-date help-inline">Tap a circle: 15 → 14 → 13… ${helpTip('Each circle is one set. The first tap logs that exercise’s progression target, then additional taps reduce reps one at a time.','About Set Circles')}</div></div>
       <div class="session-actions"><button class="small-btn" id="sessionNote">Notes</button><button class="small-btn" id="quickChange">+ Exercise</button></div>
     </div>
     <div class="exercise-list" id="exerciseList">${session.exercises.length?session.exercises.map((e,i)=>exerciseHtml(e,i)).join(''):`<div class="empty"><strong>No exercises yet</strong><p>Add exercises by Push, Pull, Legs or Core. Filter by equipment and tap once.</p><button class="primary-btn" id="firstExercise">+ Add exercise</button></div>`}</div>
@@ -849,7 +866,7 @@ function exerciseHtml(ex,i){
       <div class="set-circles">${sets.map((r,j)=>`<button class="set-circle ${r!==null?'logged':''}" data-set="${i}:${j}" aria-label="Set ${j+1}">${r===null?'':r}</button>`).join('')}<button class="set-add" data-addset="${i}">+</button></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
-      <button class="small-btn" data-progress="${i}">Add weight at ${progressAt} reps</button>
+      <span class="help-inline"><button class="small-btn" data-progress="${i}">Add weight at ${progressAt} reps</button>${helpTip('This threshold is unique to this exercise. When every logged set reaches it, Trainer Floor flags “Add weight next time.”','About Progression Target')}</span>
       ${ready?'<span style="font-size:12px;font-weight:900;color:#9ee6b5">↑ Add weight next time</span>':''}
     </div>
     <div class="exercise-footer"><div class="mini-note">${ex.note?esc(ex.note):'No exercise note'}</div><button class="remove-ex" data-remove="${i}" title="Remove">×</button></div>
@@ -898,7 +915,7 @@ async function finishSession(){
 function renderHistory(){
   const done=[...state.data.sessions].filter(s=>s.completedAt).sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt));
   $('#screen').innerHTML=`
-    <div class="page-title"><div><h1>History</h1><p>Completed sessions</p></div></div>
+    <div class="page-title"><div><h1 class="help-inline">History ${helpTip('Completed and imported workouts live here with weights, reps, exercises, dates, and notes.','About History')}</h1><p>Completed sessions</p></div></div>
     <div class="stats"><div class="stat"><b>${done.length}</b><span>Sessions</span></div><div class="stat"><b>${state.data.clients.filter(c=>!c.archived).length}</b><span>Clients</span></div><div class="stat"><b>${done.reduce((n,s)=>n+(s.exercises?.length||0),0)}</b><span>Exercises</span></div></div>
     <div class="client-list">${done.length?done.map(s=>{
       const c=state.data.clients.find(x=>x.id===s.clientId);
@@ -910,9 +927,9 @@ function renderHistory(){
 function renderSettings(){
   const p=state.data.profile; const active=state.data.clients.filter(c=>!c.archived).length;
   $('#screen').innerHTML=`
-    <div class="page-title"><div><h1>Settings</h1><p>${esc(p.email)}</p></div></div>
+    <div class="page-title"><div><h1 class="help-inline">Settings ${helpTip('Account, plan, pricing, and backup controls.','About Settings')}</h1><p>${esc(p.email)}</p></div></div>
     <div class="settings-card"><div class="settings-row"><div><h3>${esc(p.name)}</h3><p>${state.data.profile.trainerNumber===1?'Founder access • unlimited clients':state.data.plan==='pro'?'Pro • unlimited clients':`Free • up to ${FREE_CLIENT_LIMIT} clients`}</p></div><span class="badge ${state.data.plan}">Trainer #${state.data.profile.trainerNumber || '—'} • ${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span></div></div>
-    <div class="settings-card"><div class="settings-row"><div><h3>Founder pricing</h3><p>Free through 3 active clients. Founders lock their joining rate for life; each new paid founder raises the price $1/month for the next trainer.</p></div><div style="text-align:right"><div style="font-size:14px;color:#777;text-decoration:line-through">$99/mo</div><div class="plan-price">$9</div><div class="muted" style="font-size:12px">Founder rate / month</div></div></div>${state.data.plan==='free'?'<button class="primary-btn full" id="upgrade">See Founder Rate</button>':''}</div>
+    <div class="settings-card"><div class="settings-row"><div><h3 class="help-inline">Founder pricing ${helpTip('Founders lock the monthly rate they joined at while their subscription remains active. Each new paid founder raises the price for future founders.','About Founder Pricing')}</h3><p>Free through 3 active clients. Founders lock their joining rate for life; each new paid founder raises the price $1/month for the next trainer.</p></div><div style="text-align:right"><div style="font-size:14px;color:#777;text-decoration:line-through">$99/mo</div><div class="plan-price">$9</div><div class="muted" style="font-size:12px">Founder rate / month</div></div></div>${state.data.plan==='free'?'<button class="primary-btn full" id="upgrade">See Founder Rate</button>':''}</div>
     <div class="settings-card"><h3>Data backup</h3><p>Download a JSON copy of your trainer data anytime.</p><button class="ghost-btn full" id="export">Export backup</button></div>
     <div class="settings-card"><h3>Account</h3><p>${active} active clients synced to your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>`;
   if($('#upgrade')) $('#upgrade').onclick=()=>{state.modal={type:'upgrade'};render();};
@@ -931,11 +948,14 @@ function modalHtml(){
   if(m.type==='smartImportInput'){
     return modalWrap('Smart History Import',`
       ${m.error?`<div class="note-card"><div class="note-text">${esc(m.error)}</div></div>`:''}
-      <p class="muted">Upload a CSV/TXT/TSV/JSON/Markdown file or paste whatever client notes you already have. Trainer Floor will reconstruct clients and past workouts for review.</p>
-      <div class="field"><label>Upload file</label><input id="smartImportFile" type="file" accept=".csv,.txt,.tsv,.md,.json,text/plain,text/csv,application/json" /></div>
-      <div class="field"><label>Or paste notes</label><textarea id="smartImportText" rows="10" placeholder="Paste old workout notes, exports, session logs, or client records here…"></textarea></div>
-      <button class="primary-btn full" id="analyzeSmartImport">Analyze training history</button>
-      <p class="tiny">AI analyzes the text on the private server. You review the reconstructed history before it is saved.</p>`);
+      <div class="import-hero">
+        <strong>Bring your data from anywhere — even AI.</strong>
+        <p>Paste a ChatGPT, Claude, or Gemini summary; upload a spreadsheet export; or drop in old workout notes. You do not need to clean it up first. Trainer Floor will identify the clients, dates, exercises, weights, sets, reps, and coaching notes, then organize them into usable workout history for you to review.</p>
+      </div>
+      <div class="field"><label class="help-inline">Upload bulk data ${helpTip('Accepted: CSV, TXT, TSV, JSON, and Markdown. The file does not need to match a Trainer Floor template.','About File Uploads')}</label><input id="smartImportFile" type="file" accept=".csv,.txt,.tsv,.md,.json,text/plain,text/csv,application/json" /></div>
+      <div class="field"><label class="help-inline">Or paste anything ${helpTip('This can be copied from an AI conversation, old trainer notes, a CRM export, workout logs, or mixed client records.','About Pasted Data')}</label><textarea id="smartImportText" rows="10" placeholder="Paste AI-generated client summaries, workout logs, old notes, exports, or any bulk client data here…"></textarea></div>
+      <button class="primary-btn full" id="analyzeSmartImport">Make sense of my data</button>
+      <p class="tiny">AI reconstructs the records on the private server. Nothing is saved until you review the organized clients and workout history and choose Import.</p>`);
   }
   if(m.type==='smartHistoryLoading'){
     return modalWrap('Analyzing history',`<div class="empty"><strong>Reconstructing client records…</strong><p>${esc(m.filename||'Import')}</p></div>`);
