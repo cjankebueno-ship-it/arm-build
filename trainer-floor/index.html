@@ -123,7 +123,7 @@ const SB={auth:{
   async refreshSession(){const data=await refreshSession(readStoredSession());return {data:{session:data},error:data?null:new Error('Session refresh failed')}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.11.1';
+const APP_VERSION = '0.12.0';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -779,6 +779,47 @@ async function handleClientCsv(file){
   }
 }
 
+function lastCompletedSessionForClient(clientId){
+  return state.data.sessions
+    .filter(s=>s.clientId===clientId && s.completedAt)
+    .sort((a,b)=>new Date(b.completedAt||b.date||0)-new Date(a.completedAt||a.date||0))[0] || null;
+}
+
+function currentTemplateForClient(clientId){
+  return state.data.sessions
+    .filter(s=>s.clientId===clientId && !s.completedAt && Array.isArray(s.exercises) && s.exercises.length)
+    .sort((a,b)=>new Date(b.createdAt||b.date||0)-new Date(a.createdAt||a.date||0))[0] || null;
+}
+
+function compactExerciseHistory(ex){
+  const name=String(ex?.name||'Exercise').trim();
+  const weight=String(ex?.weight??'').trim();
+  const reps=(ex?.sets||[]).filter(v=>v!==null && v!==undefined && Number.isFinite(Number(v))).map(Number);
+  if(weight && reps.length) return name+' '+formatHistoryWeight(weight)+' × '+reps[0]+(reps.length>1?'…':'');
+  if(weight) return name+' '+formatHistoryWeight(weight);
+  if(reps.length) return name+' × '+reps[0]+(reps.length>1?'…':'')+' reps';
+  return name;
+}
+
+function clientHistoryLine(client){
+  const last=lastCompletedSessionForClient(client.id);
+  if(last){
+    const dateLabel=(last.sessionNote||'').startsWith('[DATE UNKNOWN]')
+      ? 'Last workout: date unknown'
+      : 'Last '+new Date(last.completedAt).toLocaleDateString();
+    const exercises=(last.exercises||[]).slice(0,2).map(compactExerciseHistory).filter(Boolean);
+    return dateLabel+(exercises.length?' • '+exercises.join(' • '):' • workout saved');
+  }
+
+  const current=currentTemplateForClient(client.id);
+  if(current){
+    const names=(current.exercises||[]).slice(0,2).map(x=>x.name).filter(Boolean);
+    return 'Workout loaded'+(names.length?' • '+names.join(' • '):'')+' • no past session imported yet';
+  }
+
+  return 'No workout history imported yet';
+}
+
 function renderClients(){
   const clients = activeClientsForDisplay();
   $('#screen').innerHTML = `
@@ -794,9 +835,8 @@ function renderClients(){
   const draw=(q='')=>{
     const filtered=clients.filter(c=>c.name.toLowerCase().includes(q.toLowerCase()));
     $('#clientList').innerHTML = filtered.length ? filtered.map(c=>{
-      const last = [...state.data.sessions].reverse().find(s=>s.clientId===c.id && s.completedAt);
       return `<button class="client-card" data-client="${c.id}">
-        <div><div class="client-name">${esc(c.name)}</div><div class="client-sub">${last?((last.sessionNote||'').startsWith('[DATE UNKNOWN]')?'Past session imported — date unknown':'Last session '+new Date(last.completedAt).toLocaleDateString()):'Ready for first session'}${c.note?' • note saved':''}</div></div>
+        <div><div class="client-name">${esc(c.name)}</div><div class="client-sub">${esc(clientHistoryLine(c))}${c.note?' • note saved':''}</div></div>
         <div class="client-arrow">›</div>
       </button>`;
     }).join('') : `<div class="empty"><strong>${q?'No matches':'Add your first client'}</strong><p>${q?'Try a different name.':'This stays intentionally simple: client, workout, notes.'}</p>${q?'':'<button class="primary-btn" id="emptyAdd">+ Add client</button>'}</div>`;
@@ -819,8 +859,14 @@ function openClientModal(client=null){
 function ensureTodaySession(clientId){
   let session = state.data.sessions.find(s=>s.clientId===clientId && s.date===todayKey() && !s.completedAt);
   if(!session){
-    const last = [...state.data.sessions].reverse().find(s=>s.clientId===clientId && s.exercises?.length);
-    session={id:uid(),clientId,date:todayKey(),createdAt:new Date().toISOString(),completedAt:null,sessionNote:'',exercises:last?last.exercises.map(x=>({...x,id:uid(),sets:x.sets.map(v=>null)})):[]};
+    const last = state.data.sessions
+      .filter(s=>s.clientId===clientId && s.exercises?.length)
+      .sort((a,b)=>{
+        const ad=new Date(a.completedAt||a.createdAt||a.date||0).getTime();
+        const bd=new Date(b.completedAt||b.createdAt||b.date||0).getTime();
+        return bd-ad;
+      })[0];
+    session={id:uid(),clientId,date:todayKey(),createdAt:new Date().toISOString(),completedAt:null,sessionNote:'',exercises:last?last.exercises.map(x=>({...x,id:uid(),sets:(x.sets||[null,null,null]).map(()=>null)})):[]};
     state.data.sessions.push(session); saveSession(session);
   }
   return session;
