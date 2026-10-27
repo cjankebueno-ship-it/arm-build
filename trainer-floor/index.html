@@ -91,7 +91,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.5.0';
+const APP_VERSION = '0.6.0';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -356,33 +356,53 @@ async function handleClientCsv(file){
     const nameKey=['name','client','client name','client_name'].find(k=>Object.prototype.hasOwnProperty.call(parsed[0],k));
     if(!nameKey){ toast('CSV needs a name column'); return; }
 
-    const existing=new Set(state.data.clients.map(c=>c.name.trim().toLowerCase()));
-    const seen=new Set();
-    let duplicates=0;
-    const rows=[];
-
+    const groups=new Map();
     parsed.forEach(r=>{
       const name=String(r[nameKey]||'').trim();
       if(!name) return;
       const key=name.toLowerCase();
-      if(existing.has(key) || seen.has(key)){ duplicates++; return; }
-      seen.add(key);
-      rows.push({
-        name,
-        note:String(r.note||r.notes||'').trim(),
-        archived:csvBool(r.archived)
-      });
+      if(!groups.has(key)) groups.set(key,{name,note:'',archived:false,exercises:[]});
+      const g=groups.get(key);
+      const note=String(r.note||r.notes||'').trim();
+      if(note && !g.note.includes(note)) g.note += (g.note?'\n':'') + note;
+      g.archived = g.archived || csvBool(r.archived);
+
+      const exercise=String(r.exercise||r['exercise name']||r.exercise_name||'').trim();
+      if(exercise){
+        const sets=Math.max(1,Math.min(10,parseInt(r.sets||'3',10)||3));
+        const reps=String(r.reps||r['target reps']||r.target_reps||'').trim();
+        const exerciseNote=String(r.exercise_note||r['exercise note']||'').trim();
+        g.exercises.push({
+          id:uid(),
+          name:exercise,
+          cat:String(r.category||r.cat||'push').trim().toLowerCase(),
+          eq:String(r.equipment||r.eq||'other').trim().toLowerCase(),
+          weight:String(r.weight||'').trim(),
+          sets:Array(sets).fill(null),
+          note:[exerciseNote,reps?('Target reps: '+reps):''].filter(Boolean).join(' • ')
+        });
+      }
     });
 
+    const rows=[...groups.values()];
+    const existingByName=new Map(state.data.clients.map(c=>[c.name.trim().toLowerCase(),c]));
+    const newActive=rows.filter(r=>!r.archived && !existingByName.has(r.name.toLowerCase())).length;
     const activeNow=state.data.clients.filter(c=>!c.archived).length;
-    const activeComing=rows.filter(r=>!r.archived).length;
-    if(state.data.plan==='free' && activeNow+activeComing>FREE_CLIENT_LIMIT){
-      state.modal={type:'csvLimit',activeNow,activeComing};
+
+    if(state.data.plan==='free' && activeNow+newActive>FREE_CLIENT_LIMIT){
+      state.modal={type:'csvLimit',activeNow,activeComing:newActive};
       render();
       return;
     }
 
-    state.modal={type:'csvImport',rows,duplicates,total:parsed.length,fileName:file.name};
+    state.modal={
+      type:'csvImport',
+      rows,
+      total:parsed.length,
+      fileName:file.name,
+      existingCount:rows.filter(r=>existingByName.has(r.name.toLowerCase())).length,
+      exerciseCount:rows.reduce((n,r)=>n+r.exercises.length,0)
+    };
     render();
   }catch(error){
     console.error(error);
@@ -562,12 +582,14 @@ function modalHtml(){
   if(m.type==='csvImport'){
     const preview=m.rows.slice(0,6);
     return modalWrap('Import clients',`<p class="muted">${esc(m.fileName)} • ${m.total} CSV rows</p>
-      <div class="settings-card">
-        <div class="settings-row"><div><h3>${m.rows.length} ready to import</h3><p>${m.duplicates} duplicate${m.duplicates===1?'':'s'} will be skipped.</p></div></div>
+      <div class="stats">
+        <div class="stat"><b>${m.rows.length}</b><span>Clients</span></div>
+        <div class="stat"><b>${m.existingCount||0}</b><span>Matched</span></div>
+        <div class="stat"><b>${m.exerciseCount||0}</b><span>Exercises</span></div>
       </div>
-      <div class="client-list">${preview.map(r=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(r.name)}</div><div class="client-sub">${r.archived?'Archived':'Active'}${r.note?' • note included':''}</div></div></div>`).join('')}${m.rows.length>preview.length?`<div class="muted" style="padding:8px 2px">+${m.rows.length-preview.length} more</div>`:''}</div>
-      <button class="primary-btn full" id="confirmCsvImport" ${m.rows.length?'':'disabled'}>Import ${m.rows.length} client${m.rows.length===1?'':'s'}</button>
-      <p class="tiny">Expected columns: <strong>name</strong>, <strong>note</strong>, <strong>archived</strong>. Duplicate client names are skipped.</p>`);
+      <div class="client-list">${preview.map(r=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(r.name)}</div><div class="client-sub">${r.exercises.length} exercise${r.exercises.length===1?'':'s'}${r.note?' • notes included':''}</div></div></div>`).join('')}${m.rows.length>preview.length?`<div class="muted" style="padding:8px 2px">+${m.rows.length-preview.length} more</div>`:''}</div>
+      <button class="primary-btn full" id="confirmCsvImport">Import & merge ${m.rows.length} client${m.rows.length===1?'':'s'}</button>
+      <p class="tiny">Columns supported: name, note, archived, exercise, category, equipment, weight, sets, reps, exercise_note. Repeated client names become one workout.</p>`);
   }
   if(m.type==='csvLimit'){
     const slots=Math.max(0,FREE_CLIENT_LIMIT-m.activeNow);
@@ -636,24 +658,37 @@ function wireModal(){
   }
   if(m.type==='csvImport' && $('#confirmCsvImport')) $('#confirmCsvImport').onclick=async()=>{
     const btn=$('#confirmCsvImport');
-    if(!m.rows.length) return;
     btn.disabled=true; btn.textContent='Importing…';
     const now=new Date().toISOString();
-    const payload=m.rows.map(r=>({
-      id:uid(),
-      trainer_id:state.user.id,
-      name:r.name,
-      note:r.note||'',
-      archived:!!r.archived,
-      updated_at:now
-    }));
+    const existingByName=new Map(state.data.clients.map(c=>[c.name.trim().toLowerCase(),c]));
     try{
-      await restInsert('tf_clients',payload);
-      state.data.clients.push(...payload.map(p=>({id:p.id,name:p.name,note:p.note,archived:p.archived,createdAt:now})));
-      state.modal=null; render(); toast(`Imported ${payload.length} client${payload.length===1?'':'s'}`);
+      for(const r of m.rows){
+        let client=existingByName.get(r.name.toLowerCase());
+        if(client){
+          if(r.note) client.note=r.note;
+          client.archived=!!r.archived;
+        }else{
+          client={id:uid(),name:r.name,note:r.note||'',archived:!!r.archived,createdAt:now};
+          state.data.clients.push(client);
+          existingByName.set(r.name.toLowerCase(),client);
+        }
+        await syncClient(client);
+
+        if(r.exercises.length){
+          let session=state.data.sessions.find(s=>s.clientId===client.id && !s.completedAt);
+          if(!session){
+            session={id:uid(),clientId:client.id,date:todayKey(),createdAt:now,completedAt:null,sessionNote:'Imported current workout.',exercises:[]};
+            state.data.sessions.push(session);
+          }
+          session.exercises=r.exercises;
+          await syncSession(session);
+        }
+      }
+      state.modal=null; render();
+      toast(`Imported ${m.rows.length} clients • ${m.exerciseCount||0} exercises`);
     }catch(error){
       console.error(error);
-      btn.disabled=false; btn.textContent=`Import ${m.rows.length} client${m.rows.length===1?'':'s'}`;
+      btn.disabled=false; btn.textContent='Import & merge';
       toast(error.message || 'Import failed');
     }
   };
