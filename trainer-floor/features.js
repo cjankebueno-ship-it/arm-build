@@ -47,9 +47,10 @@ function restoreCachedUser(){
 }
 async function refreshExtras(){
   if(!state.user||refreshingExtras||navigator.onLine===false)return;
-  refreshingExtras=true;
+  refreshingExtras=true;const owner=state.user.id,originalData=state.data;
   try{
     const [recovered,receipts,integration]=await Promise.all([restSelectAll('tf_recovered_notes','select=*&order=created_at.asc'),restSelectAll('tf_asana_sync','select=*'),restSelect('tf_integrations','select=*')]);
+    if(state.user?.id!==owner||state.data!==originalData)return;
     state.data.recovered=recovered;state.data.asana=receipts;state.data.integration=integration?.[0]||null;
     deviceStore?.snapshot(state.data);
   }catch{}finally{refreshingExtras=false;}
@@ -98,29 +99,15 @@ function progressHtml(clientId){
     return `<div class="note-card"><strong>Best recorded: ${group.best.weight} ${group.unit} × ${group.best.reps}</strong><p class="muted">${esc(group.best.date)} · Latest ${group.latest.weight} ${group.unit} × ${group.latest.reps}</p><div class="progress-chart" role="img" aria-label="Recorded working weights over time">${recent.map(p=>`<div class="progress-column"><span>${p.weight}</span><div style="height:${Math.max(4,80*p.weight/max)}px"></div><small>${esc(p.date.slice(5))}</small></div>`).join('')}</div></div><div class="progress-table">${recent.slice().reverse().map(p=>`<div><span>${esc(p.date)}</span><b>${p.weight} ${group.unit} × ${p.reps}</b><span>${p.sets} sets · ${p.totalReps} total reps</span></div>`).join('')}</div>`;
   }).join('')||'<p class="muted">No comparable recorded weights and reps for this exercise yet.</p>'}<p class="tiny">Only completed, dated results are charted. Kilograms and pounds stay separate. Mixed loads, assistance, rep ranges, and unknown values remain in History.</p>`);
 }
-function asanaSettingsHtml(){
-  return `<div class="settings-card asana-card">
-    <div class="asana-heading"><h3>Asana sync</h3><button class="asana-help-button" id="asanaHelp" type="button" aria-label="Why connect Asana?" aria-expanded="false" aria-controls="asanaHelpText"><span aria-hidden="true">?</span></button></div>
-    <div class="asana-help-copy" id="asanaHelpText" hidden><strong>An extra copy of your workout logs</strong><p>Once connected, Asana will give you another place to organize and review completed sessions, including the summary, exercises, weights, sets, and reps. Your workouts will still be saved in Trainer Floor.</p></div>
-    <div class="asana-connection-row"><p>Not connected for this account.</p><button class="primary-btn" id="connectAsana" type="button" aria-describedby="asanaAvailability">Connect Asana</button></div>
-    <p class="tiny" id="asanaAvailability">Connection setup coming soon.</p>
-  </div>`;
-}
-function wireAsanaSettings(){
-  $('#asanaHelp').onclick=()=>{
-    const button=$('#asanaHelp'),copy=$('#asanaHelpText');
-    copy.hidden=!copy.hidden;button.setAttribute('aria-expanded',String(!copy.hidden));
-  };
-  $('#connectAsana').onclick=()=>{state.modal={type:'asanaSetup'};render();};
-}
 function asanaSetupHtml(){
   return modalWrap('Connect Asana',`<p><strong>Asana connection is not available yet.</strong></p><p class="muted">Once setup is complete, you’ll sign in to Asana, approve access, and choose a project for your completed workout logs.</p><p class="muted">Your workouts continue to save in Trainer Floor. No Asana connection is required to train or track clients.</p><button class="primary-btn full" id="asanaSetupDone" type="button">Got it</button>`);
 }
 function asanaStatusHtml(session){
-  if(!state.data.integration)return '';
+  if(!state.data.integration?.enabled)return '';
   const receipt=(state.data.asana||[]).find(r=>r.session_id===session.id);
+  if(!receipt)return '<p class="sync-note">Asana: this workout has not been queued. Include previous workouts in Settings to copy it.</p>';
   const synced=receipt?.status==='synced'&&receipt.synced_revision>=session.revision;
-  return `<p class="sync-note">Asana: ${synced?`synced${receipt.asana_url?` · <a href="${esc(receipt.asana_url)}" target="_blank" rel="noopener">View full log</a>`:''}`:receipt?.status==='error'?'retry needed':'queued for the next hourly sync'}.</p>`;
+  return `<p class="sync-note">Asana: ${synced?`synced${/^https:\/\/app\.asana\.com\//.test(receipt.asana_url||'')?` · <a href="${esc(receipt.asana_url)}" target="_blank" rel="noopener">View full log</a>`:''}`:receipt?.status==='error'?'retry needed':'queued for automatic sync'}.</p>`;
 }
 function recoveredHtml(clientId){
   const notes=(state.data.recovered||[]).filter(r=>r.client_id===clientId);
