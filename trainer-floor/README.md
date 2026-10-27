@@ -15,3 +15,5 @@ The founding offer is $19/month or $190/year, with a free three-active-client pl
 Asana status UI displays a configured account integration and sync receipts. It does not itself run an Asana sync worker.
 
 Run `TZ=America/Los_Angeles node --test tests/*.test.cjs` from the repository root. The sample preview is isolated in a sandbox and uses synthetic data; it never saves to a real account. Backend import tests are in the private repository. Bump app asset query versions and the service-worker cache together when publishing a new app release.
+
+Appearance: choose Light or Dark in Settings or on the sign-in screen. The preference is stored on the device and applied before initial rendering. Theme changes do not re-render workouts or reset rest timers.
