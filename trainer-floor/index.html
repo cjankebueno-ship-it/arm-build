@@ -104,7 +104,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.9.1';
+const APP_VERSION = '0.9.2';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -929,7 +929,7 @@ function renderSettings(){
   $('#screen').innerHTML=`
     <div class="page-title"><div><h1 class="help-inline">Settings ${helpTip('Account, plan, pricing, and backup controls.','About Settings')}</h1><p>${esc(p.email)}</p></div></div>
     <div class="settings-card"><div class="settings-row"><div><h3>${esc(p.name)}</h3><p>${state.data.profile.trainerNumber===1?'Founder access • unlimited clients':state.data.plan==='pro'?'Pro • unlimited clients':`Free • up to ${FREE_CLIENT_LIMIT} clients`}</p></div><span class="badge ${state.data.plan}">Trainer #${state.data.profile.trainerNumber || '—'} • ${state.data.profile.trainerNumber===1?'Founder':state.data.plan==='pro'?'Pro':'Free'}</span></div></div>
-    <div class="settings-card"><div class="settings-row"><div><h3 class="help-inline">Founder pricing ${helpTip('Founders lock the monthly rate they joined at while their subscription remains active. Each new paid founder raises the price for future founders.','About Founder Pricing')}</h3><p>Free through 3 active clients. Founders lock their joining rate for life; each new paid founder raises the price $1/month for the next trainer.</p></div><div style="text-align:right"><div style="font-size:14px;color:#777;text-decoration:line-through">$99/mo</div><div class="plan-price">$9</div><div class="muted" style="font-size:12px">Founder rate / month</div></div></div>${state.data.plan==='free'?'<button class="primary-btn full" id="upgrade">See Founder Rate</button>':''}</div>
+    <div class="settings-card"><div class="settings-row"><div><h3 class="help-inline">Founder pricing ${helpTip('Founders lock the monthly rate they joined at while their subscription remains active. Each new paid founder raises the price by $1/month for future founders until the Founder Rate reaches its $99/month cap.','About Founder Pricing')}</h3><p>Free through 3 active clients. Founders lock their joining rate for life. Each new paid founder raises the rate $1/month for future founders until it reaches the $99/month cap.</p></div><div style="text-align:right"><div style="font-size:14px;color:#777;text-decoration:line-through">$99/mo</div><div class="plan-price">$9</div><div class="muted" style="font-size:12px">Founder rate / month</div></div></div>${state.data.plan==='free'?'<button class="primary-btn full" id="upgrade">See Founder Rate</button>':''}</div>
     <div class="settings-card"><h3>Data backup</h3><p>Download a JSON copy of your trainer data anytime.</p><button class="ghost-btn full" id="export">Export backup</button></div>
     <div class="settings-card"><h3>Account</h3><p>${active} active clients synced to your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>`;
   if($('#upgrade')) $('#upgrade').onclick=()=>{state.modal={type:'upgrade'};render();};
@@ -1040,13 +1040,13 @@ function modalHtml(){
     <div class="plan-price" style="font-size:44px;color:#fff">$9<span style="font-size:15px;letter-spacing:0;color:#aaa">/month</span></div>
   </div>
   <div style="font-weight:950;font-size:18px;margin-top:5px">Your Founder Rate</div>
-  <p style="margin-top:8px">Join at today's price and keep that monthly rate. Every new paid founder raises the price by <strong>$1/month</strong> for the next trainer.</p>
+  <p style="margin-top:8px">Join at today's price and keep that monthly rate. Every new paid founder raises the price by <strong>$1/month</strong> for the next trainer, until the Founder Rate reaches the <strong>$99/month cap</strong>.</p>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
     <div class="stat" style="text-align:center"><b>$9</b><span>You</span></div>
     <div class="stat" style="text-align:center"><b>$10</b><span>Next founder</span></div>
     <div class="stat" style="text-align:center"><b>$11</b><span>Then</span></div>
   </div>
-  <p class="tiny" style="margin-bottom:0!important">Example: Founder #1 locks $9/mo. Founder #2 locks $10/mo. Founder #3 locks $11/mo. The price keeps rising $1 for each new paid founder, up to the planned $99/mo standard price.</p>
+  <p class="tiny" style="margin-bottom:0!important">Example: Founder #1 locks $9/mo. Founder #2 locks $10/mo. Founder #3 locks $11/mo. Each new paid founder increases the rate by $1/month until it reaches $99/month. $99/month is the maximum Founder Rate.</p>
 </div>
 <button class="primary-btn full" id="prototypeUpgrade">Lock in $9/month Founder Rate</button>
 <p class="tiny">Checkout is not active yet. The price will only advance after a completed paid subscription once billing is connected.</p>`);
