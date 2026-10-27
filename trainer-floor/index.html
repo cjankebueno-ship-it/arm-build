@@ -46,6 +46,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .client-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}.back-btn{border:0;background:var(--panel2);color:var(--text);width:42px;height:42px;border-radius:12px;font-size:21px}.client-header h1{margin:0;font-size:26px;letter-spacing:-.04em}.client-header .sub{font-size:12px;color:var(--muted);margin-top:2px}.header-actions{margin-left:auto;display:flex;gap:8px}
 .note-card{background:#11141b;border:1px solid #2d3757;border-radius:14px;padding:12px 13px;margin:12px 0 16px;color:#e2e7f7}.note-card .note-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#8ea7ff;font-weight:900;margin-bottom:4px}.note-card .note-text{white-space:pre-wrap;font-size:14px;line-height:1.42}.note-empty{color:#76809d}
 .session-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0}.session-title{font-size:20px;font-weight:950;letter-spacing:-.03em}.session-date{font-size:12px;color:var(--muted);margin-top:2px}.session-actions{display:flex;gap:8px}
+.rest-timer{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));z-index:24;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:5px 6px 5px 14px;border:1px solid #4664b3;border-radius:999px;background:#141e39;color:#dbe4ff;box-shadow:0 4px 20px #0008}.rest-timer[hidden]{display:none}.rest-timer-label{font-size:12px;font-weight:800}.rest-timer-time{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums;min-width:4ch}.rest-timer button{width:40px;height:40px;border:0;border-radius:50%;background:#25345d;color:#dbe4ff;font-size:21px}.screen.has-rest-timer{padding-bottom:180px}
 .exercise-list{display:grid;gap:12px}.exercise-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}.exercise-head{display:flex;align-items:flex-start;gap:10px}.exercise-title{flex:1;min-width:0}.exercise-title h3{font-size:17px;margin:0;letter-spacing:-.02em}.exercise-meta{color:var(--muted);font-size:12px;margin-top:4px;text-transform:capitalize}.change-btn{border:1px solid var(--line);background:#101012;color:#d7d7db;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:900}.log-row{display:flex;align-items:center;gap:10px;margin-top:13px}.weight-box{width:95px;display:flex;align-items:center;gap:4px;background:#0f0f11;border:1px solid var(--line);border-radius:13px;padding:9px}.weight-box input{width:55px;background:transparent;border:0;color:var(--text);font-weight:900;font-size:17px;outline:none}.weight-box span{font-size:11px;color:var(--muted);font-weight:800}.set-circles{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}.set-circle{width:47px;height:47px;border-radius:50%;border:2px solid var(--red);background:transparent;color:#a9b8ff;font-size:14px;font-weight:950;display:grid;place-items:center;transition:.12s ease}.set-circle.logged{background:var(--red);color:white;box-shadow:0 0 0 3px rgba(65,105,225,.16)}.set-circle:active{transform:scale(.94)}.set-add{width:42px;height:42px;border-radius:50%;border:1px dashed #555;background:transparent;color:#999;font-weight:900}.exercise-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px}.mini-note{font-size:12px;color:#a8a8af;max-width:78%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.remove-ex{border:0;background:transparent;color:#855;font-size:16px;padding:4px 6px}
 .add-exercise{width:100%;margin-top:12px;background:#121214;border:1px dashed #444;color:#d2d2d6;border-radius:16px;padding:14px;font-weight:900}.finish-btn{width:100%;margin-top:16px;background:var(--red);border:0;color:white;border-radius:16px;padding:16px;font-size:16px;font-weight:950}.completed-banner{background:#11271a;border:1px solid #255c3c;color:#baf6d2;border-radius:14px;padding:12px 14px;margin:12px 0;font-weight:800}
 .modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center}.modal{width:min(720px,100%);max-height:89vh;overflow:auto;background:#121214;border:1px solid #333;border-radius:24px 24px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:var(--shadow)}.modal-handle{width:42px;height:5px;background:#444;border-radius:99px;margin:0 auto 12px}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.modal-head h2{margin:0;font-size:23px;letter-spacing:-.035em}.close-btn{border:0;background:var(--panel2);color:#aaa;width:38px;height:38px;border-radius:12px;font-size:19px}.chips{display:flex;gap:8px;overflow:auto;padding:10px 0 4px}.category-chip,.equipment-chip{background:var(--panel2);border:1px solid var(--line);padding:9px 12px;font-size:12px;font-weight:900;text-transform:capitalize;white-space:nowrap}.category-chip.active,.equipment-chip.active{background:var(--red);border-color:var(--red);color:#fff}.picker-list{display:grid;gap:8px;margin-top:12px}.picker-item{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;text-align:left;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px}.picker-item strong{display:block;font-size:15px}.picker-item small{display:block;color:var(--muted);margin-top:3px;text-transform:capitalize}.picker-plus{font-size:24px;color:var(--red)}
@@ -134,7 +135,7 @@ const SB={auth:{
   async refreshSession(){const data=await refreshSession(readStoredSession());return {data:{session:data},error:data?null:new Error('Session refresh failed')}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.13.0';
+const APP_VERSION = '0.14.0';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -201,6 +202,68 @@ function helpTip(text,label='More information'){
 
 const todayKey = () => H.localDay();
 const niceDate = (d=new Date()) => d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+
+// Keep rest timing on this device, scoped to the signed-in trainer and workout.
+// Use a timestamp so background throttling and screen locking do not lose time.
+const restTimers = new Map();
+let restTimerTick = null;
+function restTimerKey(session){return `trainer_floor_rest_v1:${state.user.id}:${session.id}`;}
+function getRestTimer(session){
+  if(!state.user || session.completedAt) return null;
+  const key=restTimerKey(session);
+  if(!restTimers.has(key)){
+    let timer=null;
+    try{
+      const saved=JSON.parse(localStorage.getItem(key)||'null');
+      if(saved && Number.isFinite(saved.startedAt) && saved.startedAt>0 && typeof saved.exerciseId==='string' && Number.isInteger(saved.setIndex) && saved.setIndex>=0) timer=saved;
+    }catch{}
+    restTimers.set(key,timer);
+  }
+  return restTimers.get(key);
+}
+function saveRestTimer(session,timer){
+  if(!state.user) return;
+  const key=restTimerKey(session);
+  restTimers.set(key,timer);
+  try{if(timer) localStorage.setItem(key,JSON.stringify(timer));else localStorage.removeItem(key);}catch{}
+}
+function formatRestTime(startedAt,now=Date.now()){
+  const seconds=Math.max(0,Math.floor((now-startedAt)/1000));
+  const minutes=Math.floor(seconds/60);
+  const tail=String(seconds%60).padStart(2,'0');
+  return minutes<60 ? `${minutes}:${tail}` : `${Math.floor(minutes/60)}:${String(minutes%60).padStart(2,'0')}:${tail}`;
+}
+function stopRestTimerTick(){
+  if(restTimerTick!==null) clearInterval(restTimerTick);
+  restTimerTick=null;
+}
+function refreshRestTimer(session){
+  stopRestTimerTick();
+  const panel=$('#restTimer');
+  if(!panel) return;
+  const timer=getRestTimer(session);
+  panel.hidden=!timer;
+  $('#screen').classList.toggle('has-rest-timer',!!timer);
+  if(!timer) return;
+  const tick=()=>{const output=$('#restTimerTime');if(output) output.textContent=formatRestTime(timer.startedAt);};
+  tick();
+  restTimerTick=setInterval(tick,250);
+}
+function logSet(session,i,j){
+  const ex=session.exercises[i], previous=ex.sets[j];
+  const firstTap=previous===null || previous===undefined;
+  const next=firstTap ? exerciseProgressAt(ex) : previous>1 ? previous-1 : null;
+  ex.sets[j]=next;
+  if(firstTap){
+    saveRestTimer(session,{startedAt:Date.now(),exerciseId:ex.id,setIndex:j});
+  }else if(next===null){
+    const timer=getRestTimer(session);
+    if(timer?.exerciseId===ex.id && timer.setIndex===j) saveRestTimer(session,null);
+  }
+  saveSession(session);
+  refreshRestTimer(session);
+  return next;
+}
 
 async function loadRemote(user){
   let rows=await restSelect('tf_profiles',`select=*&user_id=eq.${q(user.id)}&limit=1`);
@@ -284,6 +347,7 @@ async function start(){
 }
 
 function renderLogin(message=''){
+  stopRestTimerTick();
   $('#app').innerHTML = `
     <div class="login-wrap">
       <div class="login-card">
@@ -342,6 +406,7 @@ function renderLogin(message=''){
 }
 
 function render(){
+  stopRestTimerTick();
   if(!state.user) return renderLogin();
   $('#app').innerHTML = `
     <div class="app-shell">
@@ -865,12 +930,20 @@ function renderWorkout(){
       <div class="note-text ${client.note?'':'note-empty'}">${client.note?esc(client.note):'Tap to add a coaching note.'}</div>
     </div>
     <div class="session-bar">
-      <div><div class="session-title help-inline">Workout ${helpTip('Today’s working session. Finish it to save it permanently into History.','About Today’s Workout')}</div><div class="session-date help-inline">Tap a circle: 15 → 14 → 13… ${helpTip('Each circle is one set. The first tap logs that exercise’s progression target, then additional taps reduce reps one at a time.','About Set Circles')}</div></div>
+      <div><div class="session-title help-inline">Workout ${helpTip('Today’s working session. Finish it to save it permanently into History.','About Today’s Workout')}</div><div class="session-date help-inline">Tap a circle: 15 → 14 → 13… ${helpTip('Each circle is one set. The first tap logs that exercise’s progression target and starts a count-up rest timer. Additional taps adjust reps without restarting your rest. Logging the next set restarts the timer.','About Set Circles')}</div></div>
       <div class="session-actions"><button class="small-btn" id="sessionNote">Notes</button><button class="small-btn" id="quickChange">+ Exercise</button></div>
     </div>
     <div class="exercise-list" id="exerciseList">${session.exercises.length?session.exercises.map((e,i)=>exerciseHtml(e,i)).join(''):`<div class="empty"><strong>No exercises yet</strong><p>Add exercises by Push, Pull, Legs or Core. Filter by equipment and tap once.</p><button class="primary-btn" id="firstExercise">+ Add exercise</button></div>`}</div>
     ${session.exercises.length?'<button class="add-exercise" id="addExercise">+ Add exercise</button>':''}
-    <button class="finish-btn" id="finishSession">Finish session</button>`;
+    <button class="finish-btn" id="finishSession">Finish session</button>
+    <div class="rest-timer" id="restTimer" hidden>
+      <span class="rest-timer-label">Rest</span><span class="rest-timer-time" id="restTimerTime" role="timer" aria-label="Rest time" aria-live="off">0:00</span>
+      <button type="button" id="restartRestTimer" aria-label="Restart rest timer" title="Restart rest timer">↺</button>
+      <button type="button" id="stopRestTimer" aria-label="Stop rest timer" title="Stop rest timer">×</button>
+    </div>`;
+  $('#restartRestTimer').onclick=()=>{const timer=getRestTimer(session);if(timer){saveRestTimer(session,{...timer,startedAt:Date.now()});refreshRestTimer(session);}};
+  $('#stopRestTimer').onclick=()=>{saveRestTimer(session,null);refreshRestTimer(session);};
+  refreshRestTimer(session);
   $('#clientHistory').onclick=()=>{state.historyClientId=client.id;state.historyQuery='';state.view='history';render();};
   $('#back').onclick=()=>{state.view='clients';render();};
   $('#editClient').onclick=()=>openClientModal(client);
@@ -935,16 +1008,15 @@ function exerciseHtml(ex,i){
 
 function wireExerciseCards(session){
   document.querySelectorAll('[data-set]').forEach(btn=>btn.onclick=()=>{
-    const [i,j]=btn.dataset.set.split(':').map(Number); let v=session.exercises[i].sets[j];
-    if(v===null || v===undefined) v=exerciseProgressAt(session.exercises[i]); else if(v>1) v--; else v=null;
-    session.exercises[i].sets[j]=v; saveSession(session);
+    const [i,j]=btn.dataset.set.split(':').map(Number);
+    const v=logSet(session,i,j);
     btn.textContent=v===null?'':v; btn.classList.toggle('logged',v!==null);
   });
   document.querySelectorAll('[data-weight]').forEach(inp=>inp.onchange=()=>{session.exercises[+inp.dataset.weight].weight=inp.value;saveSession(session);toast('Weight saved');});
   document.querySelectorAll('[data-progress]').forEach(b=>b.onclick=()=>{state.modal={type:'progressionTarget',index:+b.dataset.progress};render();});
   document.querySelectorAll('[data-change]').forEach(b=>b.onclick=()=>openPicker(+b.dataset.change));
   document.querySelectorAll('[data-addset]').forEach(b=>b.onclick=()=>{session.exercises[+b.dataset.addset].sets.push(null);saveSession(session);render();});
-  document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{session.exercises.splice(+b.dataset.remove,1);saveSession(session);render();});
+  document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{const ex=session.exercises[+b.dataset.remove];if(getRestTimer(session)?.exerciseId===ex.id) saveRestTimer(session,null);session.exercises.splice(+b.dataset.remove,1);saveSession(session);render();});
   document.querySelectorAll('.mini-note').forEach((n,idx)=>n.onclick=()=>{state.modal={type:'exerciseNote',index:idx};render();});
 }
 
@@ -961,6 +1033,7 @@ async function finishSession(){
   session.completedAt=new Date().toISOString();
   try{
     await syncSession(session);
+    saveRestTimer(session,null);
     toast('Session saved');
     state.view='history';
     render();
@@ -1318,6 +1391,7 @@ function wirePickerItems(){
   document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
     const x=EXERCISES[+b.dataset.pick], s=currentSession();
     const previous=state.picker.replaceIndex===null?null:s.exercises[state.picker.replaceIndex];
+    if(previous && getRestTimer(s)?.exerciseId===previous.id) saveRestTimer(s,null);
     const setCount=Math.max(1, previous?.sets?.length || 3);
     const ex={id:uid(),name:x.name,cat:x.cat,eq:x.eq,weight:'',sets:Array(setCount).fill(null),note:'',progressAt:previous?.progressAt||TARGET_REPS};
     if(state.picker.replaceIndex===null) s.exercises.push(ex); else s.exercises[state.picker.replaceIndex]=ex;
