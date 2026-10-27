@@ -91,7 +91,7 @@ const SB={auth:{
   async signUp({email,password,options}){try{const {data}=await api('/auth/v1/signup',{method:'POST',body:{email,password,data:options?.data||{}}});if(data?.access_token)writeStoredSession(data);return {data:{session:data?.access_token?data:null,user:data?.user||null},error:null}}catch(error){return {data:{},error}}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.6.0';
+const APP_VERSION = '0.6.1';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -348,9 +348,42 @@ function csvBool(value){
   return ['true','1','yes','y'].includes(String(value||'').trim().toLowerCase());
 }
 
+
+function clientMatchKey(name){
+  let key=String(name||'').toLowerCase()
+    .replace(/\([^)]*\)/g,' ')
+    .replace(/[^a-z0-9]+/g,' ')
+    .trim()
+    .replace(/\s+/g,' ');
+  const aliases={
+    'trish':'patricia wiener',
+    'patricia wiener':'patricia wiener',
+    'trish patricia wiener':'patricia wiener',
+    'patricia trish wiener':'patricia wiener',
+    'jaime':'jaime bott',
+    'jaime bott':'jaime bott',
+    'leo':'leonardo kusumo',
+    'leonardo':'leonardo kusumo',
+    'leo leonardo kusumo':'leonardo kusumo',
+    'leonardo leo kusumo':'leonardo kusumo',
+    'jim':'james gold',
+    'james gold':'james gold',
+    'jim james gold':'james gold'
+  };
+  return aliases[key] || key;
+}
+
+async function refreshClientRosterForImport(){
+  const rows=await restSelect('tf_clients','select=*&order=created_at.asc');
+  if(!state.data) return;
+  state.data.clients=(rows||[]).map(c=>({
+    id:c.id,name:c.name,note:c.note||'',archived:c.archived,createdAt:c.created_at
+  }));
+}
 async function handleClientCsv(file){
   if(!file) return;
   try{
+    await refreshClientRosterForImport();
     const parsed=parseCsv(await file.text());
     if(!parsed.length){ toast('CSV has no client rows'); return; }
     const nameKey=['name','client','client name','client_name'].find(k=>Object.prototype.hasOwnProperty.call(parsed[0],k));
@@ -360,7 +393,7 @@ async function handleClientCsv(file){
     parsed.forEach(r=>{
       const name=String(r[nameKey]||'').trim();
       if(!name) return;
-      const key=name.toLowerCase();
+      const key=clientMatchKey(name);
       if(!groups.has(key)) groups.set(key,{name,note:'',archived:false,exercises:[]});
       const g=groups.get(key);
       const note=String(r.note||r.notes||'').trim();
@@ -385,8 +418,8 @@ async function handleClientCsv(file){
     });
 
     const rows=[...groups.values()];
-    const existingByName=new Map(state.data.clients.map(c=>[c.name.trim().toLowerCase(),c]));
-    const newActive=rows.filter(r=>!r.archived && !existingByName.has(r.name.toLowerCase())).length;
+    const existingByName=new Map(state.data.clients.map(c=>[clientMatchKey(c.name),c]));
+    const newActive=rows.filter(r=>!r.archived && !existingByName.has(clientMatchKey(r.name))).length;
     const activeNow=state.data.clients.filter(c=>!c.archived).length;
 
     if(state.data.plan==='free' && activeNow+newActive>FREE_CLIENT_LIMIT){
@@ -400,7 +433,7 @@ async function handleClientCsv(file){
       rows,
       total:parsed.length,
       fileName:file.name,
-      existingCount:rows.filter(r=>existingByName.has(r.name.toLowerCase())).length,
+      existingCount:rows.filter(r=>existingByName.has(clientMatchKey(r.name))).length,
       exerciseCount:rows.reduce((n,r)=>n+r.exercises.length,0)
     };
     render();
@@ -584,12 +617,12 @@ function modalHtml(){
     return modalWrap('Import clients',`<p class="muted">${esc(m.fileName)} • ${m.total} CSV rows</p>
       <div class="stats">
         <div class="stat"><b>${m.rows.length}</b><span>Clients</span></div>
-        <div class="stat"><b>${m.existingCount||0}</b><span>Matched</span></div>
+        <div class="stat"><b>${m.existingCount||0}</b><span>Existing to update</span></div>
         <div class="stat"><b>${m.exerciseCount||0}</b><span>Exercises</span></div>
       </div>
       <div class="client-list">${preview.map(r=>`<div class="client-card" style="cursor:default"><div><div class="client-name">${esc(r.name)}</div><div class="client-sub">${r.exercises.length} exercise${r.exercises.length===1?'':'s'}${r.note?' • notes included':''}</div></div></div>`).join('')}${m.rows.length>preview.length?`<div class="muted" style="padding:8px 2px">+${m.rows.length-preview.length} more</div>`:''}</div>
       <button class="primary-btn full" id="confirmCsvImport">Import & merge ${m.rows.length} client${m.rows.length===1?'':'s'}</button>
-      <p class="tiny">Columns supported: name, note, archived, exercise, category, equipment, weight, sets, reps, exercise_note. Repeated client names become one workout.</p>`);
+      <p class="tiny">Existing clients are updated — never rejected as duplicates. New clients are added. Repeated client rows become one workout.</p>`);
   }
   if(m.type==='csvLimit'){
     const slots=Math.max(0,FREE_CLIENT_LIMIT-m.activeNow);
@@ -660,17 +693,17 @@ function wireModal(){
     const btn=$('#confirmCsvImport');
     btn.disabled=true; btn.textContent='Importing…';
     const now=new Date().toISOString();
-    const existingByName=new Map(state.data.clients.map(c=>[c.name.trim().toLowerCase(),c]));
+    const existingByName=new Map(state.data.clients.map(c=>[clientMatchKey(c.name),c]));
     try{
       for(const r of m.rows){
-        let client=existingByName.get(r.name.toLowerCase());
+        let client=existingByName.get(clientMatchKey(r.name));
         if(client){
           if(r.note) client.note=r.note;
           client.archived=!!r.archived;
         }else{
           client={id:uid(),name:r.name,note:r.note||'',archived:!!r.archived,createdAt:now};
           state.data.clients.push(client);
-          existingByName.set(r.name.toLowerCase(),client);
+          existingByName.set(clientMatchKey(r.name),client);
         }
         await syncClient(client);
 
