@@ -13,8 +13,12 @@ function app(storage=new Map()){
   let tickId=0;
   class Clock extends Date{static now(){return now;}}
   const nodes={
-    '#restTimer':{hidden:true},
+    '#restTimer':{hidden:true,dataset:{}},
     '#restTimerTime':{textContent:''},
+    '#restTimerStatus':{textContent:''},
+    '#restTimerHint':{textContent:''},
+    '#restartRestTimer':{disabled:true},
+    '#stopRestTimer':{disabled:true},
     '#screen':{classList:{toggle(){}}}
   };
   const bubble={dataset:{set:'0:0'},textContent:'',classList:{toggle(){}}};
@@ -70,11 +74,11 @@ test('client sessions and signed-in trainers keep separate timers',()=>{
   assert.equal(a.nodes['#restTimerTime'].textContent,'0:30');
 });
 
-test('clearing the latest set or stopping rest hides and removes the timer',()=>{
+test('clearing the latest set or stopping rest removes timing and shows the idle prompt',()=>{
   const a=app();a.run('session.exercises[0].progressAt=1;logSet(session,0,0);logSet(session,0,0)');
-  assert.equal(a.nodes['#restTimer'].hidden,true);assert.equal(a.ticks.size,0);assert.equal(a.storage.size,0);
+  assert.equal(a.nodes['#restTimer'].hidden,false);assert.equal(a.nodes['#restTimerHint'].textContent,'Tap a set to start');assert.equal(a.ticks.size,0);assert.equal(a.storage.size,0);
   a.run('logSet(session,0,0);saveRestTimer(session,null);refreshRestTimer(session)');
-  assert.equal(a.nodes['#restTimer'].hidden,true);assert.equal(a.storage.size,0);
+  assert.equal(a.nodes['#restTimer'].dataset.phase,'idle');assert.equal(a.storage.size,0);
 });
 
 test('rest can restart manually; completed sessions never restore an active timer',()=>{
@@ -92,4 +96,28 @@ test('malformed or blocked browser storage does not prevent logging',()=>{
   }
   const a=app();a.run(`localStorage.getItem=localStorage.setItem=localStorage.removeItem=()=>{throw new Error('Storage unavailable')};logSet(session,0,0)`);
   a.advance(2000);assert.equal(a.nodes['#restTimerTime'].textContent,'0:02');assert.equal(a.run('saves'),1);
+});
+
+test('timer is visible before logging and starts when a filled bubble is tapped',()=>{
+  const a=app();a.run('refreshRestTimer(session)');
+  assert.equal(a.nodes['#restTimer'].hidden,false);
+  assert.equal(a.nodes['#restTimerStatus'].textContent,'Rest timer');
+  assert.equal(a.nodes['#restTimerTime'].textContent,'0:00');
+  a.run('session.exercises[0].sets[0]=15;wireExerciseCards(session)');a.bubble.onclick();
+  assert.equal(a.bubble.textContent,14);assert.equal(a.nodes['#restTimer'].dataset.phase,'red');
+  a.advance(10000);a.bubble.onclick();assert.equal(a.nodes['#restTimerTime'].textContent,'0:10');
+});
+
+test('rest color changes at exactly 30 and 60 seconds with matching text labels',()=>{
+  const a=app();a.run('logSet(session,0,0)');
+  assert.equal(a.nodes['#restTimer'].dataset.phase,'red');
+  assert.equal(a.nodes['#restTimerHint'].textContent,'Keep resting');
+  a.advance(29999);assert.equal(a.nodes['#restTimer'].dataset.phase,'red');
+  a.advance(1);assert.equal(a.nodes['#restTimer'].dataset.phase,'yellow');
+  assert.equal(a.nodes['#restTimerStatus'].textContent,'Get ready');
+  a.advance(29999);assert.equal(a.nodes['#restTimer'].dataset.phase,'yellow');
+  a.advance(1);assert.equal(a.nodes['#restTimer'].dataset.phase,'green');
+  assert.equal(a.nodes['#restTimerStatus'].textContent,'Ready');
+  a.advance(5000);assert.equal(a.nodes['#restTimerTime'].textContent,'1:05');
+  a.run('logSet(session,0,1)');assert.equal(a.nodes['#restTimer'].dataset.phase,'red');
 });

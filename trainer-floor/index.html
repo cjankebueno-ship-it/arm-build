@@ -47,6 +47,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .note-card{background:#11141b;border:1px solid #2d3757;border-radius:14px;padding:12px 13px;margin:12px 0 16px;color:#e2e7f7}.note-card .note-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#8ea7ff;font-weight:900;margin-bottom:4px}.note-card .note-text{white-space:pre-wrap;font-size:14px;line-height:1.42}.note-empty{color:#76809d}
 .session-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0}.session-title{font-size:20px;font-weight:950;letter-spacing:-.03em}.session-date{font-size:12px;color:var(--muted);margin-top:2px}.session-actions{display:flex;gap:8px}
 .rest-timer{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));z-index:24;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:5px 6px 5px 14px;border:1px solid #4664b3;border-radius:999px;background:#141e39;color:#dbe4ff;box-shadow:0 4px 20px #0008}.rest-timer[hidden]{display:none}.rest-timer-label{font-size:12px;font-weight:800}.rest-timer-time{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums;min-width:4ch}.rest-timer button{width:40px;height:40px;border:0;border-radius:50%;background:#25345d;color:#dbe4ff;font-size:21px}.screen.has-rest-timer{padding-bottom:180px}
+.rest-timer{transition:background-color .5s,border-color .5s,color .5s}.rest-timer[data-phase="red"]{background:#521e27;border-color:#fa7885;color:#ffe0e3}.rest-timer[data-phase="yellow"]{background:#514014;border-color:#edc552;color:#fff0b4}.rest-timer[data-phase="green"]{background:#133f2c;border-color:#63d79a;color:#d5ffe8}.rest-timer button{background:#ffffff14;color:inherit;flex-shrink:0}.rest-timer button:disabled{opacity:.35;cursor:default}.rest-timer-copy{display:grid;gap:2px;min-width:72px}.rest-timer-hint{font-size:10px;white-space:nowrap}.build-label{color:var(--muted);font-size:11px;text-align:center;margin:18px 0 0}
 .exercise-list{display:grid;gap:12px}.exercise-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}.exercise-head{display:flex;align-items:flex-start;gap:10px}.exercise-title{flex:1;min-width:0}.exercise-title h3{font-size:17px;margin:0;letter-spacing:-.02em}.exercise-meta{color:var(--muted);font-size:12px;margin-top:4px;text-transform:capitalize}.change-btn{border:1px solid var(--line);background:#101012;color:#d7d7db;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:900}.log-row{display:flex;align-items:center;gap:10px;margin-top:13px}.weight-box{width:95px;display:flex;align-items:center;gap:4px;background:#0f0f11;border:1px solid var(--line);border-radius:13px;padding:9px}.weight-box input{width:55px;background:transparent;border:0;color:var(--text);font-weight:900;font-size:17px;outline:none}.weight-box span{font-size:11px;color:var(--muted);font-weight:800}.set-circles{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}.set-circle{width:47px;height:47px;border-radius:50%;border:2px solid var(--red);background:transparent;color:#a9b8ff;font-size:14px;font-weight:950;display:grid;place-items:center;transition:.12s ease}.set-circle.logged{background:var(--red);color:white;box-shadow:0 0 0 3px rgba(65,105,225,.16)}.set-circle:active{transform:scale(.94)}.set-add{width:42px;height:42px;border-radius:50%;border:1px dashed #555;background:transparent;color:#999;font-weight:900}.exercise-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px}.mini-note{font-size:12px;color:#a8a8af;max-width:78%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.remove-ex{border:0;background:transparent;color:#855;font-size:16px;padding:4px 6px}
 .add-exercise{width:100%;margin-top:12px;background:#121214;border:1px dashed #444;color:#d2d2d6;border-radius:16px;padding:14px;font-weight:900}.finish-btn{width:100%;margin-top:16px;background:var(--red);border:0;color:white;border-radius:16px;padding:16px;font-size:16px;font-weight:950}.completed-banner{background:#11271a;border:1px solid #255c3c;color:#baf6d2;border-radius:14px;padding:12px 14px;margin:12px 0;font-weight:800}
 .modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center}.modal{width:min(720px,100%);max-height:89vh;overflow:auto;background:#121214;border:1px solid #333;border-radius:24px 24px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:var(--shadow)}.modal-handle{width:42px;height:5px;background:#444;border-radius:99px;margin:0 auto 12px}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.modal-head h2{margin:0;font-size:23px;letter-spacing:-.035em}.close-btn{border:0;background:var(--panel2);color:#aaa;width:38px;height:38px;border-radius:12px;font-size:19px}.chips{display:flex;gap:8px;overflow:auto;padding:10px 0 4px}.category-chip,.equipment-chip{background:var(--panel2);border:1px solid var(--line);padding:9px 12px;font-size:12px;font-weight:900;text-transform:capitalize;white-space:nowrap}.category-chip.active,.equipment-chip.active{background:var(--red);border-color:var(--red);color:#fff}.picker-list{display:grid;gap:8px;margin-top:12px}.picker-item{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;text-align:left;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px}.picker-item strong{display:block;font-size:15px}.picker-item small{display:block;color:var(--muted);margin-top:3px;text-transform:capitalize}.picker-plus{font-size:24px;color:var(--red)}
@@ -135,7 +136,7 @@ const SB={auth:{
   async refreshSession(){const data=await refreshSession(readStoredSession());return {data:{session:data},error:data?null:new Error('Session refresh failed')}},
   async signOut(){writeStoredSession(null);return {error:null}}
 }};
-const APP_VERSION = '0.14.0';
+const APP_VERSION = '0.14.1';
 const FREE_CLIENT_LIMIT = 3;
 const TARGET_REPS = 15;
 
@@ -233,6 +234,10 @@ function formatRestTime(startedAt,now=Date.now()){
   const tail=String(seconds%60).padStart(2,'0');
   return minutes<60 ? `${minutes}:${tail}` : `${Math.floor(minutes/60)}:${String(minutes%60).padStart(2,'0')}:${tail}`;
 }
+function restPhase(startedAt,now=Date.now()){
+  const elapsed=Math.max(0,now-startedAt);
+  return elapsed<30000 ? {color:'red',label:'Rest'} : elapsed<60000 ? {color:'yellow',label:'Get ready'} : {color:'green',label:'Ready'};
+}
 function stopRestTimerTick(){
   if(restTimerTick!==null) clearInterval(restTimerTick);
   restTimerTick=null;
@@ -242,10 +247,24 @@ function refreshRestTimer(session){
   const panel=$('#restTimer');
   if(!panel) return;
   const timer=getRestTimer(session);
-  panel.hidden=!timer;
-  $('#screen').classList.toggle('has-rest-timer',!!timer);
-  if(!timer) return;
-  const tick=()=>{const output=$('#restTimerTime');if(output) output.textContent=formatRestTime(timer.startedAt);};
+  panel.hidden=!!session.completedAt || !session.exercises.length;
+  $('#screen').classList.toggle('has-rest-timer',!panel.hidden);
+  $('#restartRestTimer').disabled=!timer;
+  $('#stopRestTimer').disabled=!timer;
+  if(!timer){
+    panel.dataset.phase='idle';
+    $('#restTimerTime').textContent='0:00';
+    $('#restTimerStatus').textContent='Rest timer';
+    $('#restTimerHint').textContent='Tap a set to start';
+    return;
+  }
+  const tick=()=>{
+    const phase=restPhase(timer.startedAt);
+    $('#restTimerTime').textContent=formatRestTime(timer.startedAt);
+    panel.dataset.phase=phase.color;
+    $('#restTimerStatus').textContent=phase.label;
+    $('#restTimerHint').textContent=phase.color==='red' ? 'Keep resting' : phase.color==='yellow' ? 'Almost one minute' : 'One minute or more';
+  };
   tick();
   restTimerTick=setInterval(tick,250);
 }
@@ -254,7 +273,7 @@ function logSet(session,i,j){
   const firstTap=previous===null || previous===undefined;
   const next=firstTap ? exerciseProgressAt(ex) : previous>1 ? previous-1 : null;
   ex.sets[j]=next;
-  if(firstTap){
+  if(firstTap || (next!==null && !getRestTimer(session))){
     saveRestTimer(session,{startedAt:Date.now(),exerciseId:ex.id,setIndex:j});
   }else if(next===null){
     const timer=getRestTimer(session);
@@ -365,6 +384,7 @@ function renderLogin(message=''){
           <button class="ghost-btn full" id="seePricing" type="button">See Founder Pricing</button>
         </form>
         <p class="tiny">Free for up to 3 active clients. Founding 25 trainers can lock $25/month; later founder cohorts are $50 and $75 before the standard $99/month rate. Trainer #1 receives founder access.</p>
+        <p class="build-label">Trainer Floor ${APP_VERSION}</p>
       </div>
     </div>`;
   $('#loginForm').addEventListener('submit', async e=>{
@@ -936,8 +956,9 @@ function renderWorkout(){
     <div class="exercise-list" id="exerciseList">${session.exercises.length?session.exercises.map((e,i)=>exerciseHtml(e,i)).join(''):`<div class="empty"><strong>No exercises yet</strong><p>Add exercises by Push, Pull, Legs or Core. Filter by equipment and tap once.</p><button class="primary-btn" id="firstExercise">+ Add exercise</button></div>`}</div>
     ${session.exercises.length?'<button class="add-exercise" id="addExercise">+ Add exercise</button>':''}
     <button class="finish-btn" id="finishSession">Finish session</button>
+    <p class="build-label">Trainer Floor ${APP_VERSION}</p>
     <div class="rest-timer" id="restTimer" hidden>
-      <span class="rest-timer-label">Rest</span><span class="rest-timer-time" id="restTimerTime" role="timer" aria-label="Rest time" aria-live="off">0:00</span>
+      <span class="rest-timer-copy"><span class="rest-timer-label" id="restTimerStatus">Rest timer</span><span class="rest-timer-hint" id="restTimerHint">Tap a set to start</span></span><span class="rest-timer-time" id="restTimerTime" role="timer" aria-label="Rest time" aria-live="off">0:00</span>
       <button type="button" id="restartRestTimer" aria-label="Restart rest timer" title="Restart rest timer">↺</button>
       <button type="button" id="stopRestTimer" aria-label="Stop rest timer" title="Stop rest timer">×</button>
     </div>`;
@@ -1097,7 +1118,8 @@ function renderSettings(){
       ${state.data.plan==='free'?'<button class="primary-btn full" id="upgrade">See Founder Pricing</button>':''}
     </div>
     <div class="settings-card"><h3>Data backup</h3><p>Download a JSON copy of your trainer data anytime.</p><button class="ghost-btn full" id="export">Export backup</button></div>
-    <div class="settings-card"><h3>Account</h3><p>${active} active clients synced to your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>`;
+    <div class="settings-card"><h3>Account</h3><p>${active} active clients synced to your account.</p><button class="ghost-btn full" id="logout">Sign out</button></div>
+    <p class="build-label">Trainer Floor ${APP_VERSION}</p>`;
   if($('#upgrade')) $('#upgrade').onclick=()=>{state.modal={type:'upgrade'};render();};
   $('#logout').onclick=async()=>{await SB.auth.signOut();state.user=null;state.data=null;state.modal=null;renderLogin();};
   $('#export').onclick=()=>{
