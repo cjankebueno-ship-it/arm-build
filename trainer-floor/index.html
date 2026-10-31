@@ -118,6 +118,24 @@ body:has(#quickEditToggle) {overflow:hidden;height:100dvh}
 .quick-page-nav{margin:0}
 .quick-page-nav button{padding:6px 9px}
 @media(max-height:720px){.app-shell:has(#quickEditToggle) .exercise-list{grid-template-rows:minmax(0,1fr)}.app-shell:has(#quickEditToggle) .exercise-list .exercise-card:nth-child(2){display:none}}
+
+/* StrongLifts-style full-workout overview: all exercises in one continuous list. */
+.app-shell:has(#quickEditToggle) .screen{overflow:hidden}
+.app-shell:has(#quickEditToggle) .exercise-list{display:flex;flex-direction:column;gap:3px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none;min-height:0;flex:1}
+.app-shell:has(#quickEditToggle) .exercise-list::-webkit-scrollbar{display:none}
+.app-shell:has(#quickEditToggle) .exercise-card{flex:0 0 auto;min-height:0;padding:7px 8px;border-radius:9px}
+.app-shell:has(#quickEditToggle) .exercise-head{align-items:center;gap:5px}
+.app-shell:has(#quickEditToggle) .exercise-head h3{font-size:14px}
+.app-shell:has(#quickEditToggle) .exercise-meta,.app-shell:has(#quickEditToggle) .exercise-footer,.app-shell:has(#quickEditToggle) .exercise-card .progress-ready{display:none}
+.app-shell:has(#quickEditToggle) .exercise-card .log-row{margin-top:4px}
+.app-shell:has(#quickEditToggle) .exercise-card .set-circle{width:34px;height:34px}
+.app-shell:has(#quickEditToggle) .exercise-card .set-add{width:29px;height:29px}
+.app-shell:has(#quickEditToggle) .exercise-card .weight-box{width:65px}
+.app-shell:has(#quickEditToggle) .exercise-card .weight-box input{width:34px}
+.app-shell:has(#quickEditToggle) .exercise-card .change-btn{padding:5px 7px}
+.app-shell:has(#quickEditToggle) .exercise-card [data-progress]{display:none}
+.app-shell:has(#quickEditToggle) .exercise-card .log-row + div{margin-top:4px!important}
+@media(max-height:720px){.app-shell:has(#quickEditToggle) .exercise-list{display:flex;flex-direction:column}.app-shell:has(#quickEditToggle) .exercise-list .exercise-card:nth-child(2){display:block}}
 </style>
 <link rel="stylesheet" href="features.css?v=0.17.1" />
 <link rel="stylesheet" href="theme.css?v=0.17.1" />
