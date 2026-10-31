@@ -75,6 +75,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 @media (max-width:520px){.help-tip{left:auto;right:-10px;transform:translateY(3px);width:min(260px,80vw)}.help-wrap:hover .help-tip,.help-wrap:focus-within .help-tip{transform:translateY(0)}.help-tip::after{left:auto;right:13px}}
 
 .last-workout{background:linear-gradient(135deg,#151e39,#11151e);border:1px solid #33487d;border-radius:16px;padding:16px;margin-bottom:16px}.last-workout p{font-size:14px;line-height:1.5;color:#c4cee7}.last-workout .note-label{font-size:12px;color:#a9bfff;font-weight:800}.previous-performance{padding:10px 12px;border-radius:10px;background:#101520;border-left:3px solid #4169e1;margin-top:12px;color:#b9c7eb;font-size:12px;line-height:1.55}.history-date{color:#a9bfff;font-size:13px;font-weight:700;margin-top:6px}.filter-label{display:block;color:var(--muted);font-size:12px;margin:0 0 7px}.import-session{border-top:1px solid var(--line);padding:10px 0;font-size:13px;line-height:1.5}details{margin-top:10px;font-size:13px;line-height:1.5}summary{cursor:pointer;color:#a9bfff}details .note-text{white-space:pre-wrap}.client-card>div:first-child{min-width:0}.client-sub{line-height:1.5;overflow-wrap:anywhere}@media(max-width:440px){.page-title{flex-wrap:wrap}.session-bar{flex-wrap:wrap}.header-actions .small-btn{padding:9px}.client-header h1{font-size:22px}}
+.quick-edit-controls{display:flex;align-items:center;gap:8px;margin:8px 0}.quick-edit-controls .primary-btn{flex-shrink:0}.quick-edit-controls span{font-size:11px;color:var(--muted)}.quick-edit-panel{padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:8px 0}.quick-edit-panel[hidden]{display:none}.quick-edit-entry{display:flex;gap:5px}.quick-edit-entry input{min-width:0;flex:1;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px}.quick-edit-samples{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.quick-edit-samples button,.quick-page-nav button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px;font-size:11px}.quick-page-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;font-size:12px}.quick-page-nav button:disabled{opacity:.3}.quick-target{font-size:12px;font-weight:800}
 </style>
 <link rel="stylesheet" href="features.css?v=0.17.1" />
 <link rel="stylesheet" href="theme.css?v=0.17.1" />
@@ -813,6 +814,72 @@ function ensureTodaySession(clientId){
 function currentClient(){ return state.data.clients.find(c=>c.id===state.selectedClientId); }
 function currentSession(){return state.data.sessions.find(s=>s.id===state.selectedSessionId&&s.clientId===state.selectedClientId&&!s.completedAt)||state.data.sessions.find(s=>s.clientId===state.selectedClientId&&s.date===todayKey()&&!s.completedAt&&!s.sessionNote?.startsWith('[PROGRAM TEMPLATE]'))||ensureTodaySession(state.selectedClientId);}
 
+
+let quickEditPage=0;
+let quickEditBusy=false;
+function quickEditPosition(text){
+ const m=text.match(/(?:as |to |in |at )(?:the )?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\\d+)(?:st|nd|rd|th)?(?: exercise| position)?/i);
+ if(!m)return null;
+ return ({first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10})[m[1].toLowerCase()]||Number(m[1]);
+}
+function quickEditApply(raw){
+ const session=currentSession(), text=raw.trim().replace(/[.!]$/,'');
+ if(!text)return;
+ const p=quickEditPosition(text);
+ const stripPosition=t=>t.replace(/(?: as | to | in | at )(?:the )?(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\\d+)(?:st|nd|rd|th)?(?: exercise| position)?$/i,'').trim();
+ const find=name=>session.exercises.findIndex(e=>e.name.toLowerCase().includes(name.toLowerCase()));
+ const before=JSON.stringify(session.exercises);
+ try{
+  let match;
+  if((match=text.match(/^(?:add|insert|put) (.+)$/i))){
+   const name=stripPosition(match[1]).replace(/^(?:the )?/i,'').trim();
+   if(!name)throw Error('Specify an exercise');
+   if(find(name)>=0)throw Error('Exercise already exists. Try moving it.');
+   const lib=EXERCISES.find(x=>x.name.toLowerCase()===name.toLowerCase())||EXERCISES.find(x=>x.name.toLowerCase().includes(name.toLowerCase()));
+   const ex={id:uid(),name:lib?.name||name.replace(/^./,c=>c.toUpperCase()),cat:lib?.cat||'strength',eq:lib?.eq||'other',weight:'',sets:[null,null,null],note:'',progressAt:TARGET_REPS};
+   session.exercises.splice(p?Math.min(session.exercises.length,Math.max(0,p-1)):session.exercises.length,0,ex);
+  }else if((match=text.match(/^(?:delete|remove) (.+)$/i))){
+   const i=find(match[1]);if(i<0)throw Error('Exercise not found');
+   if(session.exercises[i].sets.some(v=>v!==null))throw Error('Cannot delete logged sets. Clear them manually first.');
+   session.exercises.splice(i,1);
+  }else if((match=text.match(/^move (.+)$/i))&&p){
+   const i=find(stripPosition(match[1]));if(i<0)throw Error('Exercise not found');
+   const [ex]=session.exercises.splice(i,1);session.exercises.splice(Math.min(session.exercises.length,p-1),0,ex);
+  }else if((match=text.match(/(?:set|change|make|update) (?:the )?(?:target )?(?:reps|repetitions|rep target)(?: for (.+?))? to (\\d+)/i))){
+   const n=Number(match[2]);if(n<1||n>100)throw Error('Target must be 1–100');
+   const i=match[1]?find(match[1]):-1;if(match[1]&&i<0)throw Error('Exercise not found');
+   (i>=0?[session.exercises[i]]:session.exercises).forEach(ex=>ex.progressAt=n);
+  }else throw Error('Try: add, delete, move, or set target reps.');
+  saveSession(session);quickEditPage=p?Math.floor((p-1)/3):quickEditPage;renderWorkout();toast('Workout updated · keep coaching');
+ }catch(e){session.exercises=JSON.parse(before);toast(e.message||'Could not edit workout');}
+}
+function quickEditSubmit(text){
+ if(quickEditBusy||!text.trim())return;
+ quickEditBusy=true;
+ const status=document.getElementById('quickEditStatus');
+ if(status)status.textContent='Updating workout… keep coaching.';
+ setTimeout(()=>{quickEditBusy=false;quickEditApply(text)},350);
+}
+function quickEditVoice(){
+ const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!Speech){toast('Voice unavailable here. Type your edit.');return}
+ const recognition=new Speech();recognition.lang='en-US';recognition.onresult=e=>quickEditSubmit(e.results[0][0].transcript);
+ recognition.onerror=()=>toast('Microphone unavailable. Type your edit.');
+ recognition.start();
+}
+function quickEditWire(){
+ const toggle=$('#quickEditToggle'), panel=$('#quickEditPanel'), input=$('#quickEditInput');
+ toggle.onclick=()=>{panel.hidden=!panel.hidden;if(!panel.hidden)input.focus()};
+ $('#quickEditApply').onclick=()=>{quickEditSubmit(input.value);input.value=''};
+ input.onkeydown=e=>{if(e.key==='Enter'){$('#quickEditApply').click()}};
+ $('#quickEditVoice').onclick=quickEditVoice;
+ document.querySelectorAll('[data-quick-sample]').forEach(b=>b.onclick=()=>quickEditSubmit(b.dataset.quickSample));
+ document.querySelectorAll('[data-target-minus]').forEach(b=>b.onclick=()=>{const e=currentSession().exercises[+b.dataset.targetMinus];e.progressAt=Math.max(1,exerciseProgressAt(e)-1);saveSession(currentSession());renderWorkout()});
+ document.querySelectorAll('[data-target-plus]').forEach(b=>b.onclick=()=>{const e=currentSession().exercises[+b.dataset.targetPlus];e.progressAt=exerciseProgressAt(e)+1;saveSession(currentSession());renderWorkout()});
+ if($('#quickPrev'))$('#quickPrev').onclick=()=>{quickEditPage=Math.max(0,quickEditPage-1);renderWorkout()};
+ if($('#quickNext'))$('#quickNext').onclick=()=>{quickEditPage++;renderWorkout()};
+}
+
 function renderWorkout(){
   const client=currentClient(); if(!client){state.view='clients';return render();}
   const session=currentSession();
@@ -839,7 +906,10 @@ function renderWorkout(){
       <div><div class="session-title help-inline">Workout ${helpTip('Today’s working session. Finish it to save it permanently into History.','About Today’s Workout')}</div><div class="session-date help-inline">Tap a circle: 15 → 14 → 13… ${helpTip('Each circle is one set. The first tap logs that exercise’s progression target and starts a count-up rest timer. Additional taps adjust reps without restarting your rest. Logging the next set restarts the timer.','About Set Circles')}</div></div>
       <div class="session-actions"><button class="small-btn" id="sessionNote">Notes</button><button class="small-btn" id="quickChange">+ Exercise</button></div>
     </div>
-    <div class="exercise-list" id="exerciseList">${session.exercises.length?session.exercises.map((e,i)=>exerciseHtml(e,i)).join(''):`<div class="empty"><strong>No exercises yet</strong><p>Add exercises by Push, Pull, Legs or Core. Filter by equipment and tap once.</p><button class="primary-btn" id="firstExercise">+ Add exercise</button></div>`}</div>
+    <div class="quick-edit-controls"><button class="primary-btn" id="quickEditToggle">✎ Edit workout · speak or type</button><span id="quickEditStatus" aria-live="polite">Keep coaching while edits update.</span></div>
+    <div class="quick-edit-panel" id="quickEditPanel" hidden><div class="quick-edit-entry"><input id="quickEditInput" placeholder="Tell Trainer Floor what to change" aria-label="Workout edit instruction"><button class="small-btn" id="quickEditVoice">🎙 Speak</button><button class="primary-btn" id="quickEditApply">Apply</button></div><div class="quick-edit-samples"><button data-quick-sample="Add dumbbell bench press as third exercise">Add dumbbell bench press</button><button data-quick-sample="Delete rows">Delete rows</button><button data-quick-sample="Set target reps to 15">Set reps to 15</button></div></div>
+    <div class="quick-page-nav"><button id="quickPrev" ${quickEditPage===0?'disabled':''}>‹ Previous</button><span>Exercises ${session.exercises.length?quickEditPage*3+1:0}–${Math.min(session.exercises.length,(quickEditPage+1)*3)} of ${session.exercises.length}</span><button id="quickNext" ${(quickEditPage+1)*3>=session.exercises.length?'disabled':''}>Next ›</button></div>
+    <div class="exercise-list" id="exerciseList">${session.exercises.length?session.exercises.map((e,i)=>({e,i})).slice(quickEditPage*3,quickEditPage*3+3).map(({e,i})=>exerciseHtml(e,i)).join(''):`<div class="empty"><strong>No exercises yet</strong><p>Add exercises by Push, Pull, Legs or Core. Filter by equipment and tap once.</p><button class="primary-btn" id="firstExercise">+ Add exercise</button></div>`}</div>
     ${session.exercises.length?'<button class="add-exercise" id="addExercise">+ Add exercise</button>':''}
     <button class="finish-btn" id="finishSession">Finish session</button>
     <p class="build-label">Trainer Floor ${APP_VERSION}</p>
@@ -863,6 +933,7 @@ function renderWorkout(){
   if($('#addExercise')) $('#addExercise').onclick=()=>openPicker(null);
   $('#finishSession').onclick=finishSession;
   wireExerciseCards(session);
+  quickEditWire();
 }
 
 function exerciseProgressAt(ex){
@@ -905,7 +976,7 @@ function exerciseHtml(ex,i){
       <div class="set-circles">${sets.map((r,j)=>`<button class="set-circle ${r!==null?'logged':''}" data-set="${i}:${j}" aria-label="Set ${j+1}">${r===null?'':r}</button>`).join('')}<button class="set-add" data-addset="${i}">+</button></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
-      <span class="help-inline"><button class="small-btn" data-progress="${i}">Add weight at ${progressAt} reps</button>${helpTip('This threshold is unique to this exercise. When every logged set reaches it, Trainer Floor flags “Add weight next time.”','About Progression Target')}</span>
+      <span class="help-inline"><button class="small-btn" data-target-minus="${i}" aria-label="Decrease target reps">−</button><span class="quick-target">Target ${progressAt}</span><button class="small-btn" data-target-plus="${i}" aria-label="Increase target reps">+</button><button class="small-btn" data-progress="${i}">Progression settings</button>${helpTip('This threshold is unique to this exercise. When every logged set reaches it, Trainer Floor flags “Add weight next time.”','About Progression Target')}</span>
       <span id="progressReady${i}" class="progress-ready" ${ready?'':'hidden'}>↑ Add weight next time</span>
     </div>
     <div class="exercise-footer"><div class="mini-note">${ex.note?esc(ex.note):'No exercise note'}</div><button class="remove-ex" data-remove="${i}" title="Remove">×</button></div>
