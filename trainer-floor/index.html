@@ -76,6 +76,48 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 
 .last-workout{background:linear-gradient(135deg,#151e39,#11151e);border:1px solid #33487d;border-radius:16px;padding:16px;margin-bottom:16px}.last-workout p{font-size:14px;line-height:1.5;color:#c4cee7}.last-workout .note-label{font-size:12px;color:#a9bfff;font-weight:800}.previous-performance{padding:10px 12px;border-radius:10px;background:#101520;border-left:3px solid #4169e1;margin-top:12px;color:#b9c7eb;font-size:12px;line-height:1.55}.history-date{color:#a9bfff;font-size:13px;font-weight:700;margin-top:6px}.filter-label{display:block;color:var(--muted);font-size:12px;margin:0 0 7px}.import-session{border-top:1px solid var(--line);padding:10px 0;font-size:13px;line-height:1.5}details{margin-top:10px;font-size:13px;line-height:1.5}summary{cursor:pointer;color:#a9bfff}details .note-text{white-space:pre-wrap}.client-card>div:first-child{min-width:0}.client-sub{line-height:1.5;overflow-wrap:anywhere}@media(max-width:440px){.page-title{flex-wrap:wrap}.session-bar{flex-wrap:wrap}.header-actions .small-btn{padding:9px}.client-header h1{font-size:22px}}
 .quick-edit-controls{display:flex;align-items:center;gap:8px;margin:8px 0}.quick-edit-controls .primary-btn{flex-shrink:0}.quick-edit-controls span{font-size:11px;color:var(--muted)}.quick-edit-panel{padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:8px 0}.quick-edit-panel[hidden]{display:none}.quick-edit-entry{display:flex;gap:5px}.quick-edit-entry input{min-width:0;flex:1;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px}.quick-edit-samples{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.quick-edit-samples button,.quick-page-nav button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px;font-size:11px}.quick-page-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;font-size:12px}.quick-page-nav button:disabled{opacity:.3}.quick-target{font-size:12px;font-weight:800}
+
+/* Compact, no-long-scroll coaching mode */
+body:has(#quickEditToggle) {overflow:hidden;height:100dvh}
+.app-shell:has(#quickEditToggle){height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.app-shell:has(#quickEditToggle) .topbar{position:relative;flex:0 0 auto;padding:calc(7px + env(safe-area-inset-top)) 12px 7px}
+.app-shell:has(#quickEditToggle) .screen{flex:1;min-height:0;overflow:hidden;padding:7px 12px calc(75px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:5px}
+.app-shell:has(#quickEditToggle) .screen > *{flex-shrink:0}
+.app-shell:has(#quickEditToggle) .client-header{margin:0}
+.app-shell:has(#quickEditToggle) .client-header h1{font-size:20px}
+.app-shell:has(#quickEditToggle) .last-workout,.app-shell:has(#quickEditToggle) .note-card,.app-shell:has(#quickEditToggle) .build-label{display:none}
+.app-shell:has(#quickEditToggle) .session-bar{margin:0;gap:6px}
+.app-shell:has(#quickEditToggle) .session-title{font-size:17px}
+.app-shell:has(#quickEditToggle) .session-date{display:none}
+.app-shell:has(#quickEditToggle) .session-actions .small-btn{padding:7px}
+.app-shell:has(#quickEditToggle) .exercise-list{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-rows:repeat(2,minmax(0,1fr));gap:6px}
+.app-shell:has(#quickEditToggle) .exercise-card{min-height:0;overflow:hidden;padding:9px;border-radius:13px}
+.app-shell:has(#quickEditToggle) .exercise-head h3{font-size:15px}
+.app-shell:has(#quickEditToggle) .exercise-meta{font-size:10px}
+.app-shell:has(#quickEditToggle) .previous-performance{display:none}
+.app-shell:has(#quickEditToggle) .log-row{margin-top:7px;gap:5px}
+.app-shell:has(#quickEditToggle) .set-circles{gap:5px}
+.app-shell:has(#quickEditToggle) .set-circle{width:35px;height:35px}
+.app-shell:has(#quickEditToggle) .set-add{width:32px;height:32px}
+.app-shell:has(#quickEditToggle) .weight-box{width:75px;padding:5px}
+.app-shell:has(#quickEditToggle) .weight-box input{width:42px;font-size:14px}
+.app-shell:has(#quickEditToggle) .exercise-card .small-btn{padding:5px 7px;font-size:11px}
+.app-shell:has(#quickEditToggle) .exercise-card .exercise-footer{margin-top:4px}
+.app-shell:has(#quickEditToggle) .exercise-card .mini-note{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-shell:has(#quickEditToggle) .add-exercise{display:none}
+.app-shell:has(#quickEditToggle) .finish-btn{padding:9px;margin:0}
+.app-shell:has(#quickEditToggle) .rest-timer{bottom:calc(73px + env(safe-area-inset-bottom));right:10px;left:auto;transform:none;padding:3px 6px 3px 9px}
+.quick-edit-controls{position:fixed;z-index:31;right:12px;bottom:calc(143px + env(safe-area-inset-bottom));margin:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;pointer-events:none}
+.quick-edit-controls #quickEditToggle{pointer-events:auto;width:64px;height:64px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px;font-size:24px;box-shadow:0 5px 20px #0007}
+.quick-edit-controls #quickEditToggle span{font-size:11px;line-height:1}
+.quick-edit-controls #quickEditStatus{display:none}
+.quick-edit-panel{position:fixed;z-index:32;left:10px;right:10px;bottom:calc(215px + env(safe-area-inset-bottom));margin:0;box-shadow:0 12px 36px #0008;max-width:700px}
+.quick-edit-panel[hidden]{display:none}
+.quick-edit-entry{flex-wrap:wrap}
+.quick-edit-entry input{flex-basis:100%}
+.quick-page-nav{margin:0}
+.quick-page-nav button{padding:6px 9px}
+@media(max-height:720px){.app-shell:has(#quickEditToggle) .exercise-list{grid-template-rows:minmax(0,1fr)}.app-shell:has(#quickEditToggle) .exercise-list .exercise-card:nth-child(2){display:none}}
 </style>
 <link rel="stylesheet" href="features.css?v=0.17.1" />
 <link rel="stylesheet" href="theme.css?v=0.17.1" />
@@ -850,7 +892,7 @@ function quickEditApply(raw){
    const i=match[1]?find(match[1]):-1;if(match[1]&&i<0)throw Error('Exercise not found');
    (i>=0?[session.exercises[i]]:session.exercises).forEach(ex=>ex.progressAt=n);
   }else throw Error('Try: add, delete, move, or set target reps.');
-  saveSession(session);quickEditPage=p?Math.floor((p-1)/3):quickEditPage;renderWorkout();toast('Workout updated · keep coaching');
+  saveSession(session);quickEditPage=p?Math.floor((p-1)/2):quickEditPage;renderWorkout();toast('Workout updated · keep coaching');
  }catch(e){session.exercises=JSON.parse(before);toast(e.message||'Could not edit workout');}
 }
 function quickEditSubmit(text){
@@ -906,9 +948,9 @@ function renderWorkout(){
       <div><div class="session-title help-inline">Workout ${helpTip('Today’s working session. Finish it to save it permanently into History.','About Today’s Workout')}</div><div class="session-date help-inline">Tap a circle: 15 → 14 → 13… ${helpTip('Each circle is one set. The first tap logs that exercise’s progression target and starts a count-up rest timer. Additional taps adjust reps without restarting your rest. Logging the next set restarts the timer.','About Set Circles')}</div></div>
       <div class="session-actions"><button class="small-btn" id="sessionNote">Notes</button><button class="small-btn" id="quickChange">+ Exercise</button></div>
     </div>
-    <div class="quick-edit-controls"><button class="primary-btn" id="quickEditToggle">✎ Edit workout · speak or type</button><span id="quickEditStatus" aria-live="polite">Keep coaching while edits update.</span></div>
-    <div class="quick-edit-panel" id="quickEditPanel" hidden><div class="quick-edit-entry"><input id="quickEditInput" placeholder="Tell Trainer Floor what to change" aria-label="Workout edit instruction"><button class="small-btn" id="quickEditVoice">🎙 Speak</button><button class="primary-btn" id="quickEditApply">Apply</button></div><div class="quick-edit-samples"><button data-quick-sample="Add dumbbell bench press as third exercise">Add dumbbell bench press</button><button data-quick-sample="Delete rows">Delete rows</button><button data-quick-sample="Set target reps to 15">Set reps to 15</button></div></div>
-    <div class="quick-page-nav"><button id="quickPrev" ${quickEditPage===0?'disabled':''}>‹ Previous</button><span>Exercises ${session.exercises.length?quickEditPage*3+1:0}–${Math.min(session.exercises.length,(quickEditPage+1)*3)} of ${session.exercises.length}</span><button id="quickNext" ${(quickEditPage+1)*3>=session.exercises.length?'disabled':''}>Next ›</button></div>
+    <div class="quick-edit-controls"><button class="primary-btn" id="quickEditToggle" aria-label="Edit workout" title="Edit workout · speak or type">✎<span>Edit</span></button><span id="quickEditStatus" aria-live="polite">Keep coaching while edits update.</span></div>
+    <div class="quick-edit-panel" id="quickEditPanel" role="dialog" aria-label="Edit workout" hidden><div class="quick-edit-entry"><input id="quickEditInput" placeholder="Tell Trainer Floor what to change" aria-label="Workout edit instruction"><button class="small-btn" id="quickEditVoice">🎙 Speak</button><button class="primary-btn" id="quickEditApply">Apply</button></div><div class="quick-edit-samples"><button data-quick-sample="Add dumbbell bench press as third exercise">Add dumbbell bench press</button><button data-quick-sample="Delete rows">Delete rows</button><button data-quick-sample="Set target reps to 15">Set reps to 15</button></div></div>
+    <div class="quick-page-nav"><button id="quickPrev" ${quickEditPage===0?'disabled':''}>‹ Previous</button><span>Exercises ${session.exercises.length?quickEditPage*2+1:0}–${Math.min(session.exercises.length,(quickEditPage+1)*2)} of ${session.exercises.length}</span><button id="quickNext" ${(quickEditPage+1)*3>=session.exercises.length?'disabled':''}>Next ›</button></div>
     <div class="exercise-list" id="exerciseList">${session.exercises.length?session.exercises.map((e,i)=>({e,i})).slice(quickEditPage*3,quickEditPage*3+3).map(({e,i})=>exerciseHtml(e,i)).join(''):`<div class="empty"><strong>No exercises yet</strong><p>Add exercises by Push, Pull, Legs or Core. Filter by equipment and tap once.</p><button class="primary-btn" id="firstExercise">+ Add exercise</button></div>`}</div>
     ${session.exercises.length?'<button class="add-exercise" id="addExercise">+ Add exercise</button>':''}
     <button class="finish-btn" id="finishSession">Finish session</button>
