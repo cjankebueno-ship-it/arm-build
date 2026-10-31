@@ -818,7 +818,7 @@ function currentSession(){return state.data.sessions.find(s=>s.id===state.select
 let quickEditPage=0;
 let quickEditBusy=false;
 function quickEditPosition(text){
- const m=text.match(/(?:as |to |in |at )(?:the )?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\\d+)(?:st|nd|rd|th)?(?: exercise| position)?/i);
+ const m=text.match(/(?:as |to |in |at )(?:the )?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\d+)(?:st|nd|rd|th)?(?: exercise| position)?/i);
  if(!m)return null;
  return ({first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10})[m[1].toLowerCase()]||Number(m[1]);
 }
@@ -826,7 +826,7 @@ function quickEditApply(raw){
  const session=currentSession(), text=raw.trim().replace(/[.!]$/,'');
  if(!text)return;
  const p=quickEditPosition(text);
- const stripPosition=t=>t.replace(/(?: as | to | in | at )(?:the )?(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\\d+)(?:st|nd|rd|th)?(?: exercise| position)?$/i,'').trim();
+ const stripPosition=t=>t.replace(/(?: as | to | in | at )(?:the )?(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\d+)(?:st|nd|rd|th)?(?: exercise| position)?$/i,'').trim();
  const find=name=>session.exercises.findIndex(e=>e.name.toLowerCase().includes(name.toLowerCase()));
  const before=JSON.stringify(session.exercises);
  try{
@@ -845,7 +845,7 @@ function quickEditApply(raw){
   }else if((match=text.match(/^move (.+)$/i))&&p){
    const i=find(stripPosition(match[1]));if(i<0)throw Error('Exercise not found');
    const [ex]=session.exercises.splice(i,1);session.exercises.splice(Math.min(session.exercises.length,p-1),0,ex);
-  }else if((match=text.match(/(?:set|change|make|update) (?:the )?(?:target )?(?:reps|repetitions|rep target)(?: for (.+?))? to (\\d+)/i))){
+  }else if((match=text.match(/(?:set|change|make|update) (?:the )?(?:target )?(?:reps|repetitions|rep target)(?: for (.+?))? to (\d+)/i))){
    const n=Number(match[2]);if(n<1||n>100)throw Error('Target must be 1–100');
    const i=match[1]?find(match[1]):-1;if(match[1]&&i<0)throw Error('Exercise not found');
    (i>=0?[session.exercises[i]]:session.exercises).forEach(ex=>ex.progressAt=n);
